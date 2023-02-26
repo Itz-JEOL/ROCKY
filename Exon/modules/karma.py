@@ -3,7 +3,7 @@ import asyncio
 from pyrogram import filters
 
 from Exon import DRAGONS
-from Exon import app as abishnoi
+from Exon import Abishnoi as abishnoi
 from Exon.modules.helper_funcs import can_change_info
 from Exon.modules.sql.mongo.karma_db import (
     alpha_to_int,
