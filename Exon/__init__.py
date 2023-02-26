@@ -47,8 +47,8 @@ logging.getLogger("ptbcontrib.postgres_persistence.postgrespersistence").setLeve
     logging.WARNING
 )
 
-LOGGER = logging.getLogger("[ʀᴏᴄᴋʏ]")
-LOGGER.info("ʀᴏᴄᴋʏ ɪs sᴛᴀʀᴛɪɴɢ. | ᴀɴ ᴀʙɪsʜɴᴏɪᴍғ ᴘʀᴏᴊᴇᴄᴛ ᴘᴀʀᴛs. | ʟɪᴄᴇɴsᴇᴅ ᴜɴᴅᴇʀ ɢᴘʟᴠ3.")
+LOGGER = logging.getLogger("[ᴇxᴏɴ]")
+LOGGER.info("ᴇxᴏɴ ɪs sᴛᴀʀᴛɪɴɢ. | ᴀɴ ᴀʙɪsʜɴᴏɪᴍғ ᴘʀᴏᴊᴇᴄᴛ ᴘᴀʀᴛs. | ʟɪᴄᴇɴsᴇᴅ ᴜɴᴅᴇʀ ɢᴘʟᴠ3.")
 
 try:
     if environ.get("ENV"):
@@ -106,7 +106,7 @@ WORKERS = 8
 ALLOW_EXCL = True
 TEMP_DOWNLOAD_DIRECTORY = "./Downloads"
 REM_BG_API_KEY = "LSdLgCceYz8vNqFgJVzrkDgR"
-SPAMWATCH_SUPPORT_CHAT = "@beta_support"
+SPAMWATCH_SUPPORT_CHAT = "@AbishnoiMF"
 SPAMWATCH_API = Config.SPAMWATCH_API
 ALLOW_CHATS = True
 ARQ_API_URL = "http://arq.hamker.in"
