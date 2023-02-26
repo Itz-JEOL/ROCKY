@@ -77,7 +77,7 @@ buttons = [
     ],
     [
         InlineKeyboardButton(text="🏡 ᴀʙᴏᴜᴛ 🏡", callback_data="ABG_"),
-        InlineKeyboardButton(text="🥀 ᴅᴇᴠᴇʟᴏᴘᴇʀ 🥀", url=f"tg://user?id={OWNER_ID}"),
+        InlineKeyboardButton(text="🥀 ᴏᴡɴᴇʀ 🥀", url=f"tg://user?id={OWNER_ID}"),
     ],
 ]
 
@@ -263,10 +263,6 @@ def start(update: Update, context: CallbackContext):  # sourcery no-metrics
             lol = update.effective_message.reply_text(
                 PM_START_TEX.format(usr.first_name), parse_mode=ParseMode.MARKDOWN
             )
-            time.sleep(0.4)
-            lol.edit_text("🎊")
-            time.sleep(0.5)
-            lol.edit_text("⚡")
             time.sleep(0.3)
             lol.edit_text("ꜱᴛᴀʀᴛɪɴɢ... ")
             time.sleep(0.4)
