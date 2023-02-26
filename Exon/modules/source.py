@@ -6,7 +6,7 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram import __version__ as o
 from telethon import __version__ as s
 
-from Exon import app as pbot
+from Exon import Abishnoi as as pbot
 
 ABISHNOIX = "https://telegra.ph/file/d67cd562f2905d02c20ba.jpg"
 
