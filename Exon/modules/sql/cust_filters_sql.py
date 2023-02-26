@@ -1,3 +1,33 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
+
 import threading
 
 from sqlalchemy import Boolean, Column, Integer, String, UnicodeText, distinct, func
@@ -11,30 +41,80 @@ class CustomFilters(BASE):
     chat_id = Column(String(14), primary_key=True)
     keyword = Column(UnicodeText, primary_key=True, nullable=False)
     reply = Column(UnicodeText, nullable=False)
+    is_sticker = Column(Boolean, nullable=False, default=False)
+    is_document = Column(Boolean, nullable=False, default=False)
+    is_image = Column(Boolean, nullable=False, default=False)
+    is_audio = Column(Boolean, nullable=False, default=False)
+    is_voice = Column(Boolean, nullable=False, default=False)
+    is_video = Column(Boolean, nullable=False, default=False)
+
+    has_buttons = Column(Boolean, nullable=False, default=False)
+    # NOTE: Here for legacy purposes, to ensure older filters don't mess up.
+    has_markdown = Column(Boolean, nullable=False, default=False)
+
+    # NEW FILTER
+    # alter table cust_filters add column reply_text text;
+    # alter table cust_filters add column file_type integer default 1;
+    # alter table cust_filters add column file_id text;
     reply_text = Column(UnicodeText)
     file_type = Column(Integer, nullable=False, default=1)
     file_id = Column(UnicodeText, default=None)
-    has_buttons = Column(Boolean, nullable=False, default=False)
-
-    has_media_spoiler = Column(Boolean, nullable=False, default=False)
 
     def __init__(
         self,
-        chat_id: int | str,
-        keyword: str,
-        reply: str,
-        reply_text: str,
-        has_buttons: bool,
-        has_media_spoiler: bool,
-        file_type: int,
-        file_id: str,
+        chat_id,
+        keyword,
+        reply,
+        is_sticker=False,
+        is_document=False,
+        is_image=False,
+        is_audio=False,
+        is_voice=False,
+        is_video=False,
+        has_buttons=False,
+        reply_text=None,
+        file_type=1,
+        file_id=None,
     ):
         self.chat_id = str(chat_id)  # ensure string
         self.keyword = keyword
         self.reply = reply
-        self.reply_text = reply_text
+        self.is_sticker = is_sticker
+        self.is_document = is_document
+        self.is_image = is_image
+        self.is_audio = is_audio
+        self.is_voice = is_voice
+        self.is_video = is_video
         self.has_buttons = has_buttons
-        self.has_media_spoiler = has_media_spoiler
+        self.has_markdown = True
+
+        self.reply_text = reply_text
+        self.file_type = file_type
+        self.file_id = file_id
+
+    def __repr__(self):
+        return "<Permissions for %s>" % self.chat_id
+
+    def __eq__(self, other):
+        return bool(
+            isinstance(other, CustomFilters)
+            and self.chat_id == other.chat_id
+            and self.keyword == other.keyword,
+        )
+
+
+class NewCustomFilters(BASE):
+    __tablename__ = "cust_filters_new"
+    chat_id = Column(String(14), primary_key=True)
+    keyword = Column(UnicodeText, primary_key=True, nullable=False)
+    text = Column(UnicodeText)
+    file_type = Column(Integer, nullable=False, default=1)
+    file_id = Column(UnicodeText, default=None)
+
+    def __init__(self, chat_id, keyword, text, file_type, file_id):
+        self.chat_id = str(chat_id)  # ensure string
+        self.keyword = keyword
+        self.text = text
         self.file_type = file_type
         self.file_id = file_id
 
@@ -81,11 +161,61 @@ def get_all_filters():
         SESSION.close()
 
 
-def new_add_filter(
-    chat_id, keyword, reply_text, file_type, file_id, buttons, media_spoiler
+def add_filter(
+    chat_id,
+    keyword,
+    reply,
+    is_sticker=False,
+    is_document=False,
+    is_image=False,
+    is_audio=False,
+    is_voice=False,
+    is_video=False,
+    buttons=None,
 ):
-    global CHAT_FILTERS
+    if buttons is None:
+        buttons = []
 
+    with CUST_FILT_LOCK:
+        prev = SESSION.query(CustomFilters).get((str(chat_id), keyword))
+        if prev:
+            with BUTTON_LOCK:
+                prev_buttons = (
+                    SESSION.query(Buttons)
+                    .filter(Buttons.chat_id == str(chat_id), Buttons.keyword == keyword)
+                    .all()
+                )
+                for btn in prev_buttons:
+                    SESSION.delete(btn)
+            SESSION.delete(prev)
+
+        filt = CustomFilters(
+            str(chat_id),
+            keyword,
+            reply,
+            is_sticker,
+            is_document,
+            is_image,
+            is_audio,
+            is_voice,
+            is_video,
+            bool(buttons),
+        )
+
+        if keyword not in CHAT_FILTERS.get(str(chat_id), []):
+            CHAT_FILTERS[str(chat_id)] = sorted(
+                CHAT_FILTERS.get(str(chat_id), []) + [keyword],
+                key=lambda x: (-len(x), x),
+            )
+
+        SESSION.add(filt)
+        SESSION.commit()
+
+    for b_name, url, same_line in buttons:
+        add_note_button_to_db(chat_id, keyword, b_name, url, same_line)
+
+
+def new_add_filter(chat_id, keyword, reply_text, file_type, file_id, buttons):
     if buttons is None:
         buttons = []
 
@@ -106,8 +236,13 @@ def new_add_filter(
             str(chat_id),
             keyword,
             reply="there is should be a new reply",
+            is_sticker=False,
+            is_document=False,
+            is_image=False,
+            is_audio=False,
+            is_voice=False,
+            is_video=False,
             has_buttons=bool(buttons),
-            has_media_spoiler=media_spoiler,
             reply_text=reply_text,
             file_type=file_type.value,
             file_id=file_id,
@@ -127,7 +262,6 @@ def new_add_filter(
 
 
 def remove_filter(chat_id, keyword):
-    global CHAT_FILTERS
     with CUST_FILT_LOCK:
         filt = SESSION.query(CustomFilters).get((str(chat_id), keyword))
         if filt:
@@ -168,7 +302,7 @@ def get_chat_filters(chat_id):
         SESSION.close()
 
 
-def get_filter(chat_id, keyword) -> CustomFilters:
+def get_filter(chat_id, keyword):
     try:
         return SESSION.query(CustomFilters).get((str(chat_id), keyword))
     finally:
@@ -248,6 +382,7 @@ def __migrate_filters():
             else:
                 file_type = Types.TEXT
 
+            print(str(x.chat_id), x.keyword, x.reply, file_type.value)
             if file_type == Types.TEXT:
                 filt = CustomFilters(
                     str(x.chat_id),

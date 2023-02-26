@@ -1,3 +1,33 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
+
 import threading
 
 from sqlalchemy import Column, Integer, String, UnicodeText, distinct, func
@@ -59,7 +89,6 @@ def add_to_blacklist(chat_id, trigger):
 
         SESSION.merge(blacklist_filt)  # merge to avoid duplicate key issues
         SESSION.commit()
-        global CHAT_BLACKLISTS
         if CHAT_BLACKLISTS.get(str(chat_id), set()) == set():
             CHAT_BLACKLISTS[str(chat_id)] = {trigger}
         else:
@@ -121,7 +150,6 @@ def set_blacklist_strength(chat_id, blacklist_type, value):
     # 6 = tban
     # 7 = tmute
     with BLACKLIST_SETTINGS_INSERTION_LOCK:
-        global CHAT_SETTINGS_BLACKLISTS
         curr_setting = SESSION.query(BlacklistSettings).get(str(chat_id))
         if not curr_setting:
             curr_setting = BlacklistSettings(
@@ -146,8 +174,7 @@ def get_blacklist_setting(chat_id):
         setting = CHAT_SETTINGS_BLACKLISTS.get(str(chat_id))
         if setting:
             return setting["blacklist_type"], setting["value"]
-        else:
-            return 1, "0"
+        return 1, "0"
 
     finally:
         SESSION.close()
@@ -171,7 +198,6 @@ def __load_chat_blacklists():
 
 
 def __load_chat_settings_blacklists():
-    global CHAT_SETTINGS_BLACKLISTS
     try:
         chats_settings = SESSION.query(BlacklistSettings).all()
         for x in chats_settings:  # remove tuple by ( ,)

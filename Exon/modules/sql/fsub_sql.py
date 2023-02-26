@@ -26,58 +26,49 @@ SOFTWARE.
 # TG :- @Abishnoi1m
 #     UPDATE   :- Abishnoi_bots
 #     GITHUB :- ABISHNOI69 ""
-import threading
-
-from sqlalchemy import Column, String, UnicodeText, distinct, func
+from sqlalchemy import Column, Numeric, String
 
 from Exon.modules.sql import BASE, SESSION
 
 
-class Rules(BASE):
-    __tablename__ = "rules"
-    chat_id = Column(String(14), primary_key=True)
-    rules = Column(UnicodeText, default="")
+class forceSubscribe(BASE):
+    __tablename__ = "forceSubscribe"
+    chat_id = Column(Numeric, primary_key=True)
+    channel = Column(String)
 
-    def __init__(self, chat_id):
+    def __init__(self, chat_id, channel):
         self.chat_id = chat_id
-
-    def __repr__(self):
-        return "<Chat {} rules: {}>".format(self.chat_id, self.rules)
+        self.channel = channel
 
 
-Rules.__table__.create(checkfirst=True)
-
-INSERTION_LOCK = threading.RLock()
+forceSubscribe.__table__.create(checkfirst=True)
 
 
-def set_rules(chat_id, rules_text):
-    with INSERTION_LOCK:
-        rules = SESSION.query(Rules).get(str(chat_id))
-        if not rules:
-            rules = Rules(str(chat_id))
-        rules.rules = rules_text
-
-        SESSION.add(rules)
-        SESSION.commit()
-
-
-def get_rules(chat_id):
-    rules = SESSION.query(Rules).get(str(chat_id))
-    ret = rules.rules if rules else ""
-    SESSION.close()
-    return ret
-
-
-def num_chats():
+def fs_settings(chat_id):
     try:
-        return SESSION.query(func.count(distinct(Rules.chat_id))).scalar()
+        return (
+            SESSION.query(forceSubscribe)
+            .filter(forceSubscribe.chat_id == chat_id)
+            .one()
+        )
+    except:
+        return None
     finally:
         SESSION.close()
 
 
-def migrate_chat(old_chat_id, new_chat_id):
-    with INSERTION_LOCK:
-        chat = SESSION.query(Rules).get(str(old_chat_id))
-        if chat:
-            chat.chat_id = str(new_chat_id)
+def add_channel(chat_id, channel):
+    adder = SESSION.query(forceSubscribe).get(chat_id)
+    if adder:
+        adder.channel = channel
+    else:
+        adder = forceSubscribe(chat_id, channel)
+    SESSION.add(adder)
+    SESSION.commit()
+
+
+def disapprove(chat_id):
+    rem = SESSION.query(forceSubscribe).get(chat_id)
+    if rem:
+        SESSION.delete(rem)
         SESSION.commit()

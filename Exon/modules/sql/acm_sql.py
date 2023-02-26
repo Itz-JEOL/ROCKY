@@ -26,64 +26,45 @@ SOFTWARE.
 # TG :- @Abishnoi1m
 #     UPDATE   :- Abishnoi_bots
 #     GITHUB :- ABISHNOI69 ""
+
+
 import threading
 
-from sqlalchemy import Column, String
-from sqlalchemy.sql.sqltypes import BigInteger
+from sqlalchemy import Boolean, Column, String
 
 from Exon.modules.sql import BASE, SESSION
 
 
-class Approvals(BASE):
-    __tablename__ = "approval"
+class CleanLinked(BASE):
+    __tablename__ = "clean_linked"
     chat_id = Column(String(14), primary_key=True)
-    user_id = Column(BigInteger, primary_key=True)
+    status = Column(Boolean, default=False)
 
-    def __init__(self, chat_id, user_id):
-        self.chat_id = str(chat_id)  # ensure string
-        self.user_id = user_id
-
-    def __repr__(self):
-        return "<Approve %s>" % self.user_id
+    def __init__(self, chat_id, status):
+        self.chat_id = str(chat_id)
+        self.status = status
 
 
-Approvals.__table__.create(checkfirst=True)
+CleanLinked.__table__.create(checkfirst=True)
 
-APPROVE_INSERTION_LOCK = threading.RLock()
+CLEANLINKED_LOCK = threading.RLock()
 
 
-def approve(chat_id, user_id):
-    with APPROVE_INSERTION_LOCK:
-        approve_user = Approvals(str(chat_id), user_id)
-        SESSION.add(approve_user)
+def getCleanLinked(chat_id):
+    try:
+        resultObj = SESSION.query(CleanLinked).get(str(chat_id))
+        if resultObj:
+            return resultObj.status
+        return False  # default
+    finally:
+        SESSION.close()
+
+
+def setCleanLinked(chat_id, status):
+    with CLEANLINKED_LOCK:
+        prevObj = SESSION.query(CleanLinked).get(str(chat_id))
+        if prevObj:
+            SESSION.delete(prevObj)
+        newObj = CleanLinked(str(chat_id), status)
+        SESSION.add(newObj)
         SESSION.commit()
-
-
-def is_approved(chat_id, user_id):
-    try:
-        return SESSION.query(Approvals).get((str(chat_id), user_id))
-    finally:
-        SESSION.close()
-
-
-def disapprove(chat_id, user_id):
-    with APPROVE_INSERTION_LOCK:
-        disapprove_user = SESSION.query(Approvals).get((str(chat_id), user_id))
-        if disapprove_user:
-            SESSION.delete(disapprove_user)
-            SESSION.commit()
-            return True
-        SESSION.close()
-        return False
-
-
-def list_approved(chat_id):
-    try:
-        return (
-            SESSION.query(Approvals)
-            .filter(Approvals.chat_id == str(chat_id))
-            .order_by(Approvals.user_id.asc())
-            .all()
-        )
-    finally:
-        SESSION.close()

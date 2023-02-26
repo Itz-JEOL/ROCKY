@@ -1,4 +1,32 @@
-# New chat added -> setup permissions
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
 import threading
 
 from sqlalchemy import Boolean, Column, String
@@ -27,16 +55,20 @@ class Permissions(BASE):
     button = Column(Boolean, default=False)
     egame = Column(Boolean, default=False)
     inline = Column(Boolean, default=False)
-    phone = Column(Boolean, default=False)
-    command = Column(Boolean, default=False)
-    email = Column(Boolean, default=False)
-    anonchannel = Column(Boolean, default=False)
-    forwardchannel = Column(Boolean, default=False)
-    forwardbot = Column(Boolean, default=False)
-    videonote = Column(Boolean, default=False)
-    emojicustom = Column(Boolean, default=False)
-    stickerpremium = Column(Boolean, default=False)
-    stickeranimated = Column(Boolean, default=False)
+    apk = Column(Boolean, default=False)
+    doc = Column(Boolean, default=False)
+    exe = Column(Boolean, default=False)
+    jpg = Column(Boolean, default=False)
+    mp3 = Column(Boolean, default=False)
+    pdf = Column(Boolean, default=False)
+    txt = Column(Boolean, default=False)
+    xml = Column(Boolean, default=False)
+    zip = Column(Boolean, default=False)
+    docx = Column(Boolean, default=False)
+    py = Column(Boolean, default=False)
+    svg = Column(Boolean, default=False)
+    targz = Column(Boolean, default=False)
+    wav = Column(Boolean, default=False)
 
     def __init__(self, chat_id):
         self.chat_id = str(chat_id)  # ensure string
@@ -57,16 +89,20 @@ class Permissions(BASE):
         self.button = False
         self.egame = False
         self.inline = False
-        self.phone = False
-        self.command = False
-        self.email = False
-        self.anonchannel = False
-        self.forwardchannel = False
-        self.forwardbot = False
-        self.videonote = False
-        self.emojicustom = False
-        self.stickerpremium = False
-        self.stickeranimated = False
+        self.apk = False
+        self.doc = False
+        self.exe = False
+        self.jpg = False
+        self.mp3 = False
+        self.pdf = False
+        self.txt = False
+        self.xml = False
+        self.zip = False
+        self.docx = False
+        self.py = False
+        self.svg = False
+        self.targz = False
+        self.wav = False
 
     def __repr__(self):
         return "<Permissions for %s>" % self.chat_id
@@ -80,9 +116,6 @@ class Restrictions(BASE):
     media = Column(Boolean, default=False)
     other = Column(Boolean, default=False)
     preview = Column(Boolean, default=False)
-    info = Column(Boolean, default=False)
-    invite = Column(Boolean, default=False)
-    topics = Column(Boolean, default=False)
 
     def __init__(self, chat_id):
         self.chat_id = str(chat_id)  # ensure string
@@ -90,9 +123,6 @@ class Restrictions(BASE):
         self.media = False
         self.other = False
         self.preview = False
-        self.info = False
-        self.invite = False
-        self.topics = False
 
     def __repr__(self):
         return "<Restrictions for %s>" % self.chat_id
@@ -171,26 +201,34 @@ def update_lock(chat_id, lock_type, locked):
             curr_perm.egame = locked
         elif lock_type == "inline":
             curr_perm.inline = locked
-        elif lock_type == "phone":
-            curr_perm.phone = locked
-        elif lock_type == "command":
-            curr_perm.command = locked
-        elif lock_type == "email":
-            curr_perm.email = locked
-        elif lock_type == "anonchannel":
-            curr_perm.anonchannel = locked
-        elif lock_type == "forwardchannel":
-            curr_perm.forwardchannel = locked
-        elif lock_type == "forwardbot":
-            curr_perm.forwardbot = locked
-        elif lock_type == "videonote":
-            curr_perm.videonote = locked
-        elif lock_type == "emojicustom":
-            curr_perm.emojicustom = locked
-        elif lock_type == "stickerpremium":
-            curr_perm.stickerpremium = locked
-        elif lock_type == "stickeranimated":
-            curr_perm.stickeranimated = locked
+        elif lock_type == "apk":
+            curr_perm.apk = locked
+        elif lock_type == "doc":
+            curr_perm.doc = locked
+        elif lock_type == "exe":
+            curr_perm.exe = locked
+        elif lock_type == "jpg":
+            curr_perm.jpg = locked
+        elif lock_type == "mp3":
+            curr_perm.mp3 = locked
+        elif lock_type == "pdf":
+            curr_perm.pdf = locked
+        elif lock_type == "txt":
+            curr_perm.txt = locked
+        elif lock_type == "xml":
+            curr_perm.xml = locked
+        elif lock_type == "zip":
+            curr_perm.zip = locked
+        elif lock_type == "docx":
+            curr_perm.doc = locked
+        elif lock_type == "py":
+            curr_perm.py = locked
+        elif lock_type == "svg":
+            curr_perm.svg = locked
+        elif lock_type == "targz":
+            curr_perm.tar = locked
+        elif lock_type == "wav":
+            curr_perm.wav = locked
 
         SESSION.add(curr_perm)
         SESSION.commit()
@@ -210,20 +248,11 @@ def update_restriction(chat_id, restr_type, locked):
             curr_restr.other = locked
         elif restr_type == "previews":
             curr_restr.preview = locked
-        elif restr_type == "info":
-            curr_restr.info = locked
-        elif restr_type == "invite":
-            curr_restr.invite = locked
-        elif restr_type == "topics":
-            curr_restr.topics = locked
         elif restr_type == "all":
             curr_restr.messages = locked
             curr_restr.media = locked
             curr_restr.other = locked
             curr_restr.preview = locked
-            curr_restr.info = locked
-            curr_restr.invite = locked
-            curr_restr.topcis = locked
         SESSION.add(curr_restr)
         SESSION.commit()
 
@@ -235,60 +264,68 @@ def is_locked(chat_id, lock_type):
     if not curr_perm:
         return False
 
-    elif lock_type == "sticker":
+    if lock_type == "sticker":
         return curr_perm.sticker
-    elif lock_type == "photo":
+    if lock_type == "photo":
         return curr_perm.photo
-    elif lock_type == "audio":
+    if lock_type == "audio":
         return curr_perm.audio
-    elif lock_type == "voice":
+    if lock_type == "voice":
         return curr_perm.voice
-    elif lock_type == "contact":
+    if lock_type == "contact":
         return curr_perm.contact
-    elif lock_type == "video":
+    if lock_type == "video":
         return curr_perm.video
-    elif lock_type == "document":
+    if lock_type == "document":
         return curr_perm.document
-    elif lock_type == "gif":
+    if lock_type == "gif":
         return curr_perm.gif
-    elif lock_type == "url":
+    if lock_type == "url":
         return curr_perm.url
-    elif lock_type == "bots":
+    if lock_type == "bots":
         return curr_perm.bots
-    elif lock_type == "forward":
+    if lock_type == "forward":
         return curr_perm.forward
-    elif lock_type == "game":
+    if lock_type == "game":
         return curr_perm.game
-    elif lock_type == "location":
+    if lock_type == "location":
         return curr_perm.location
-    elif lock_type == "rtl":
+    if lock_type == "rtl":
         return curr_perm.rtl
-    elif lock_type == "button":
+    if lock_type == "button":
         return curr_perm.button
-    elif lock_type == "egame":
+    if lock_type == "egame":
         return curr_perm.egame
-    elif lock_type == "inline":
+    if lock_type == "inline":
         return curr_perm.inline
-    elif lock_type == "phone":
-        return curr_perm.phone
-    elif lock_type == "command":
-        return curr_perm.command
-    elif lock_type == "email":
-        return curr_perm.email
-    elif lock_type == "anonchannel":
-        return curr_perm.anonchannel
-    elif lock_type == "forwardchannel":
-        return curr_perm.forwardchannel
-    elif lock_type == "forwardbot":
-        return curr_perm.forwardbot
-    elif lock_type == "videonote":
-        return curr_perm.videonote
-    elif lock_type == "emojicustom":
-        return curr_perm.emojicustom
-    elif lock_type == "stickerpremium":
-        return curr_perm.stickerpremium
-    elif lock_type == "stickeranimated":
-        return curr_perm.stickeranimated
+    if lock_type == "apk":
+        return curr_perm.apk
+    if lock_type == "doc":
+        return curr_perm.doc
+    if lock_type == "exe":
+        return curr_perm.exe
+    if lock_type == "jpg":
+        return curr_perm.jpg
+    if lock_type == "mp3":
+        return curr_perm.mp3
+    if lock_type == "pdf":
+        return curr_perm.pdf
+    if lock_type == "txt":
+        return curr_perm.txt
+    if lock_type == "xml":
+        return curr_perm.xml
+    if lock_type == "zip":
+        return curr_perm.zip
+    if lock_type == "docx":
+        return curr_perm.docx
+    if lock_type == "py":
+        return curr_perm.py
+    if lock_type == "svg":
+        return curr_perm.svg
+    if lock_type == "targz":
+        return curr_perm.targz
+    if lock_type == "wav":
+        return curr_perm.wav
 
 
 def is_restr_locked(chat_id, lock_type):
@@ -300,27 +337,18 @@ def is_restr_locked(chat_id, lock_type):
 
     if lock_type == "messages":
         return curr_restr.messages
-    elif lock_type == "media":
+    if lock_type == "media":
         return curr_restr.media
-    elif lock_type == "other":
+    if lock_type == "other":
         return curr_restr.other
-    elif lock_type == "previews":
+    if lock_type == "previews":
         return curr_restr.preview
-    elif lock_type == "info":
-        return curr_restr.info
-    elif lock_type == "invite":
-        return curr_restr.invite
-    elif lock_type == "topics":
-        return curr_restr.topics
-    elif lock_type == "all":
+    if lock_type == "all":
         return (
             curr_restr.messages
             and curr_restr.media
             and curr_restr.other
             and curr_restr.preview
-            and curr_restr.info
-            and curr_restr.invite
-            and curr_restr.topics
         )
 
 

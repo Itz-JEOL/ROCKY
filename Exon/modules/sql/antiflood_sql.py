@@ -1,6 +1,37 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
+
 import threading
 
-from sqlalchemy import BigInteger, Column, Integer, String, UnicodeText
+from sqlalchemy import Column, Integer, String, UnicodeText
+from sqlalchemy.sql.sqltypes import BigInteger
 
 from Exon.modules.sql import BASE, SESSION
 
@@ -63,24 +94,26 @@ def set_flood(chat_id, amount):
 
 
 def update_flood(chat_id: str, user_id) -> bool:
-    if str(chat_id) in CHAT_FLOOD:
-        curr_user_id, count, limit = CHAT_FLOOD.get(str(chat_id), DEF_OBJ)
+    if str(chat_id) not in CHAT_FLOOD:
+        return
 
-        if limit == 0:  # no antiflood
-            return False
+    curr_user_id, count, limit = CHAT_FLOOD.get(str(chat_id), DEF_OBJ)
 
-        if user_id != curr_user_id or user_id is None:  # other user
-            CHAT_FLOOD[str(chat_id)] = (user_id, DEF_COUNT, limit)
-            return False
-
-        count += 1
-        if count > limit:  # too many msgs, kick
-            CHAT_FLOOD[str(chat_id)] = (None, DEF_COUNT, limit)
-            return True
-
-        # default -> update
-        CHAT_FLOOD[str(chat_id)] = (user_id, count, limit)
+    if limit == 0:  # no antiflood
         return False
+
+    if user_id != curr_user_id or user_id is None:  # other user
+        CHAT_FLOOD[str(chat_id)] = (user_id, DEF_COUNT, limit)
+        return False
+
+    count += 1
+    if count > limit:  # too many msgs, kick
+        CHAT_FLOOD[str(chat_id)] = (None, DEF_COUNT, limit)
+        return True
+
+    # default -> update
+    CHAT_FLOOD[str(chat_id)] = (user_id, count, limit)
+    return False
 
 
 def get_flood_limit(chat_id):
@@ -115,8 +148,7 @@ def get_flood_setting(chat_id):
         setting = SESSION.query(FloodSettings).get(str(chat_id))
         if setting:
             return setting.flood_type, setting.value
-        else:
-            return 1, "0"
+        return 1, "0"
 
     finally:
         SESSION.close()

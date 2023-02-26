@@ -28,62 +28,57 @@ SOFTWARE.
 #     GITHUB :- ABISHNOI69 ""
 import threading
 
-from sqlalchemy import Column, String
-from sqlalchemy.sql.sqltypes import BigInteger
+from sqlalchemy import Column, String, UnicodeText
 
 from Exon.modules.sql import BASE, SESSION
 
 
-class Approvals(BASE):
-    __tablename__ = "approval"
+class ChatLangs(BASE):
+    __tablename__ = "chatlangs"
     chat_id = Column(String(14), primary_key=True)
-    user_id = Column(BigInteger, primary_key=True)
+    language = Column(UnicodeText)
 
-    def __init__(self, chat_id, user_id):
+    def __init__(self, chat_id, language):
         self.chat_id = str(chat_id)  # ensure string
-        self.user_id = user_id
+        self.language = language
 
     def __repr__(self):
-        return "<Approve %s>" % self.user_id
+        return "Language {} chat {}".format(self.language, self.chat_id)
 
 
-Approvals.__table__.create(checkfirst=True)
+CHAT_LANG = {}
+LANG_LOCK = threading.RLock()
+ChatLangs.__table__.create(checkfirst=True)
 
-APPROVE_INSERTION_LOCK = threading.RLock()
 
+def set_lang(chat_id: str, lang: str) -> None:
+    with LANG_LOCK:
+        curr = SESSION.query(ChatLangs).get(str(chat_id))
+        if not curr:
+            curr = ChatLangs(str(chat_id), lang)
+            SESSION.add(curr)
+            SESSION.flush()
+        else:
+            curr.language = lang
 
-def approve(chat_id, user_id):
-    with APPROVE_INSERTION_LOCK:
-        approve_user = Approvals(str(chat_id), user_id)
-        SESSION.add(approve_user)
+        CHAT_LANG[str(chat_id)] = lang
         SESSION.commit()
 
 
-def is_approved(chat_id, user_id):
+def get_chat_lang(chat_id: str) -> str:
+    lang = CHAT_LANG.get(str(chat_id))
+    if lang is None:
+        lang = "en"
+    return lang
+
+
+def __load_chat_language() -> None:
+    global CHAT_LANG
     try:
-        return SESSION.query(Approvals).get((str(chat_id), user_id))
+        allchats = SESSION.query(ChatLangs).all()
+        CHAT_LANG = {x.chat_id: x.language for x in allchats}
     finally:
         SESSION.close()
 
 
-def disapprove(chat_id, user_id):
-    with APPROVE_INSERTION_LOCK:
-        disapprove_user = SESSION.query(Approvals).get((str(chat_id), user_id))
-        if disapprove_user:
-            SESSION.delete(disapprove_user)
-            SESSION.commit()
-            return True
-        SESSION.close()
-        return False
-
-
-def list_approved(chat_id):
-    try:
-        return (
-            SESSION.query(Approvals)
-            .filter(Approvals.chat_id == str(chat_id))
-            .order_by(Approvals.user_id.asc())
-            .all()
-        )
-    finally:
-        SESSION.close()
+__load_chat_language()
