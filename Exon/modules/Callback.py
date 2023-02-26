@@ -31,7 +31,7 @@ from pyrogram.types import CallbackQuery
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode
 from telegram.ext import CallbackQueryHandler
 
-from Exon import BOT_NAME, OWNER_ID, SUPPORT_CHAT
+from Exon import BOT_NAME, OWNER_ID, SUPPORT_CHAT, OWNER_USERNAME
 from Exon import Abishnoi as pbot
 from Exon import dispatcher
 
@@ -169,9 +169,9 @@ def ABG_about_callback(update, context):
     elif query.data == "ABG_credit":  # Credit  i hope edit nai hoga
         query.message.edit_text(
             text=f"━━━━━━━ *ᴄʀᴇᴅɪᴛ* ━━━━━━━"
-            "\n🛡️ *ᴄʀᴇᴅɪᴛ ꜰᴏʀ ᴇxᴏɴ ʀᴏʙᴏᴛ* 🛡️"
+            "\n🛡️ *ᴄʀᴇᴅɪᴛ ꜰᴏʀ ROCKY CEO* 🛡️"
             "\n\nʜᴇʀᴇ ɪꜱ ᴛʜᴇ ᴅᴇᴠᴇʟᴏᴘᴇʀ ᴀɴᴅ"
-            f"\nꜱᴘᴏɴꜱᴏʀ ᴏꜰ [{BOT_NAME}](t.me/Exon_Robot)"
+            f"\nꜱᴘᴏɴꜱᴏʀ ᴏꜰ [{BOT_NAME}](https://t.me/MKN_GROUPMANAGE_ROBOT)"
             "\n\nʜᴇ ꜱᴘᴇɴᴛ ᴀ ʟᴏᴛ ᴏꜰ ᴛɪᴍᴇ ꜰᴏʀ"
             f"\nᴍᴀᴋɪɴɢ [{BOT_NAME}](t.me/{OWNER_USERNAME}) ᴀ"
             "\nꜱᴜᴘᴇʀ ɢʀᴏᴜᴘ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ ʙᴏᴛ",
@@ -213,7 +213,7 @@ def Source_about_callback(update, context):
 [ᴩʏᴛʜᴏɴ-ᴛᴇʟᴇɢʀᴀᴍ-ʙᴏᴛ](https://github.com/python-telegram-bot/python-telegram-bot)
 ᴀɴᴅ ᴜsɪɴɢ [sǫʟᴀʟᴄʜᴇᴍʏ](https://www.sqlalchemy.org) ᴀɴᴅ [ᴍᴏɴɢᴏ](https://cloud.mongodb.com) ᴀs ᴅᴀᴛᴀʙᴀsᴇ.
 
-*ʜᴇʀᴇ ɪs ᴍʏ sᴏᴜʀᴄᴇ ᴄᴏᴅᴇ :* [{BOT_NAME}](https://github.com/itz-jeol)
+*ʜᴇʀᴇ ɪs ᴍʏ sᴏᴜʀᴄᴇ ᴄᴏᴅᴇ :* [{BOT_NAME}](https://github.com/itz-jeol/ROCKY)
 
 
 ᴇxᴏɴ ʀᴏʙᴏᴛ ɪs ʟɪᴄᴇɴsᴇᴅ ᴜɴᴅᴇʀ ᴛʜᴇ ᴍɪᴛ ʟɪᴄᴇɴsᴇ.
@@ -233,7 +233,7 @@ def Source_about_callback(update, context):
                     [
                         InlineKeyboardButton(
                             text="ꜱᴏᴜʀᴄᴇ",
-                            url="https://github.com/itz-jeol",  # DON'T CHANGE
+                            url="https://github.com/itz-jeol/ROCKY",  # DON'T CHANGE
                         ),
                     ],
                 ]
