@@ -1,7 +1,7 @@
 """
 MIT License
 
-Copyright (c) 2022 ABISHNOI69 
+Copyright (c) 2022 ABISHNOI69
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,25 +21,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
-import regex
 
-
-def regex_searcher(regex_string, string):
-    try:
-        search = regex.search(regex_string, string, timeout=6)
-    except (TimeoutError, Exception):
-        return False
-    return search
-
-
-def infinite_loop_check(regex_string):
-    loop_matches = [
-        r"\((.{1,}[\+\*]){1,}\)[\+\*].",
-        r"[\(\[].{1,}\{\d(,)?\}[\)\]]\{\d(,)?\}",
-        r"\(.{1,}\)\{.{1,}(,)?\}\(.*\)(\+|\* |\{.*\})",
-    ]
-    for match in loop_matches:
-        match_1 = regex.search(match, regex_string)
-        if match_1:
-            return True
-    return False
+# """DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi
+#     MY ALL BOTS :- Abishnoi_bots
+#     GITHUB :- Abishnoi69 """

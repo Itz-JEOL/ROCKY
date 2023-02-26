@@ -1,12 +1,38 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69 
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
 import re
 import time
 from typing import Dict, List
 
 import bleach
+import emoji
 import markdown2
-from emoji import unicode_codes
+
+# from emoji import unicode_codes
 from telegram import MessageEntity
-from telegram.helpers import escape_markdown
+from telegram.utils.helpers import escape_markdown
 
 # NOTE: the url \ escape may cause double escapes
 # match * (bold) (don't escape if in url)
@@ -25,21 +51,21 @@ MATCH_MD = re.compile(
 # regex to find []() links -> hyperlinks/buttons
 LINK_REGEX = re.compile(r"(?<!\\)\[.+?\]\((.*?)\)")
 BTN_URL_REGEX = re.compile(r"(\[([^\[]+?)\]\(buttonurl:(?:/{0,2})(.+?)(:same)?\))")
-_EMOJI_REGEXP = None
+# _EMOJI_REGEXP = None
 
-
+"""
 def get_emoji_regexp():
     global _EMOJI_REGEXP
     if _EMOJI_REGEXP is None:
         emojis = sorted(unicode_codes.EMOJI_DATA, key=len, reverse=True)
         pattern = "(" + "|".join(re.escape(u) for u in emojis) + ")"
     return re.compile(pattern)
+"""
 
 
 def _selective_escape(to_parse: str) -> str:
     """
     Escape all invalid markdown
-
     :param to_parse: text to escape
     :return: valid markdown string
     """
@@ -57,7 +83,7 @@ def _selective_escape(to_parse: str) -> str:
 # This is a fun one.
 def _calc_emoji_offset(to_calc) -> int:
     # Get all emoji in text.
-    emoticons = get_emoji_regexp().finditer(to_calc)
+    emoticons = emoji.get_emoji_regexp().finditer(to_calc)
     # Check the utf16 length of the emoji to determine the offset it caused.
     # Normal, 1 character emoji don't affect; hence sub 1.
     # special, eg with two emoji characters (eg face, and skin col) will have length 2, so by subbing one we
@@ -66,16 +92,12 @@ def _calc_emoji_offset(to_calc) -> int:
 
 
 def markdown_parser(
-    txt: str,
-    entities: Dict[MessageEntity, str] = None,
-    offset: int = 0,
+    txt: str, entities: Dict[MessageEntity, str] = None, offset: int = 0
 ) -> str:
     """
     Parse a string, escaping all invalid markdown entities.
-
     Escapes URL's so as to avoid URL mangling.
     Re-adds any telegram code entities obtained from the entities object.
-
     :param txt: text to parse
     :param entities: dict of message entities in text
     :param offset: message offset - command and notename length
@@ -99,7 +121,7 @@ def markdown_parser(
         end = ent.offset + offset + ent.length - 1  # end of entity
 
         # we only care about code, url, text links
-        if ent.type in ("code", "url", "text_link", "spoiler"):
+        if ent.type in ("code", "url", "text_link"):
             # count emoji to switch counter
             count = _calc_emoji_offset(txt[:start])
             start -= count
@@ -112,12 +134,10 @@ def markdown_parser(
                     for match in LINK_REGEX.finditer(txt)
                 ):
                     continue
-                # else, check the escapes between the prev and last and forcefully escape the url to avoid mangling
-                else:
-                    # TODO: investigate possible offset bug when lots of emoji are present
-                    res += _selective_escape(txt[prev:start] or "") + escape_markdown(
-                        ent_text, 2
-                    )
+                # TODO: investigate possible offset bug when lots of emoji are present
+                res += _selective_escape(txt[prev:start] or "") + escape_markdown(
+                    ent_text
+                )
 
             # code handling
             elif ent.type == "code":
@@ -126,12 +146,8 @@ def markdown_parser(
             # handle markdown/html links
             elif ent.type == "text_link":
                 res += _selective_escape(txt[prev:start]) + "[{}]({})".format(
-                    ent_text,
-                    ent.url,
+                    ent_text, ent.url
                 )
-            # handle spoiler
-            elif ent.type == "spoiler":
-                res += _selective_escape(txt[prev:start]) + "||" + ent_text + "||"
 
             end += 1
 
@@ -172,8 +188,8 @@ def button_markdown_parser(
         else:
             note_data += markdown_note[prev:to_check]
             prev = match.start(1) - 1
-    else:
-        note_data += markdown_note[prev:]
+
+    note_data += markdown_note[prev:]
 
     return note_data, buttons
 
@@ -187,26 +203,23 @@ def escape_invalid_curly_brackets(text: str, valids: List[str]) -> str:
                 idx += 2
                 new_text += "{{{{"
                 continue
-            else:
-                success = False
-                for v in valids:
-                    if text[idx:].startswith("{" + v + "}"):
-                        success = True
-                        break
-                if success:
-                    new_text += text[idx : idx + len(v) + 2]
-                    idx += len(v) + 2
-                    continue
-                else:
-                    new_text += "{{"
+            success = False
+            for v in valids:
+                if text[idx:].startswith("{" + v + "}"):
+                    success = True
+                    break
+            if success:
+                new_text += text[idx : idx + len(v) + 2]
+                idx += len(v) + 2
+                continue
+            new_text += "{{"
 
         elif text[idx] == "}":
             if idx + 1 < len(text) and text[idx + 1] == "}":
                 idx += 2
                 new_text += "}}}}"
                 continue
-            else:
-                new_text += "}}"
+            new_text += "}}"
 
         else:
             new_text += text[idx]
@@ -221,33 +234,34 @@ START_CHAR = ("'", '"', SMART_OPEN)
 
 
 def split_quotes(text: str) -> List:
-    if not any(text.startswith(char) for char in START_CHAR):
-        return text.split(None, 1)
-    counter = 1  # ignore first char -> is some kind of quote
-    while counter < len(text):
-        if text[counter] == "\\":
+    if any(text.startswith(char) for char in START_CHAR):
+        counter = 1  # ignore first char -> is some kind of quote
+        while counter < len(text):
+            if text[counter] == "\\":
+                counter += 1
+            elif text[counter] == text[0] or (
+                text[0] == SMART_OPEN and text[counter] == SMART_CLOSE
+            ):
+                break
             counter += 1
-        elif text[counter] == text[0] or (
-            text[0] == SMART_OPEN and text[counter] == SMART_CLOSE
-        ):
-            break
-        counter += 1
-    else:
-        return text.split(None, 1)
+        else:
+            return text.split(None, 1)
 
-    # 1 to avoid starting quote, and counter is exclusive so avoids ending
-    key = remove_escapes(text[1:counter].strip())
-    # index will be in range, or `else` would have been executed and returned
-    rest = text[counter + 1 :].strip()
-    if not key:
-        key = text[0] + text[0]
-    return list(filter(None, [key, rest]))
+        # 1 to avoid starting quote, and counter is exclusive so avoids ending
+        key = remove_escapes(text[1:counter].strip())
+        # index will be in range, or `else` would have been executed and returned
+        rest = text[counter + 1 :].strip()
+        if not key:
+            key = text[0] + text[0]
+        return list(filter(None, [key, rest]))
+    return text.split(None, 1)
 
 
 def remove_escapes(text: str) -> str:
+    counter = 0
     res = ""
     is_escaped = False
-    for counter in range(len(text)):
+    while counter < len(text):
         if is_escaped:
             res += text[counter]
             is_escaped = False
@@ -255,6 +269,7 @@ def remove_escapes(text: str) -> str:
             is_escaped = True
         else:
             res += text[counter]
+        counter += 1
     return res
 
 
@@ -268,12 +283,12 @@ def escape_chars(text: str, to_escape: List[str]) -> str:
     return new_text
 
 
-async def extract_time(message, time_val):
+def extract_time(message, time_val):
     if any(time_val.endswith(unit) for unit in ("m", "h", "d")):
         unit = time_val[-1]
         time_num = time_val[:-1]  # type: str
         if not time_num.isdigit():
-            await message.reply_text("Invalid time amount specified.")
+            message.reply_text("Invalid time amount specified.")
             return ""
 
         if unit == "m":
@@ -286,26 +301,21 @@ async def extract_time(message, time_val):
             # how even...?
             return ""
         return bantime
-    else:
-        await message.reply_text(
-            "Invalid time type specified. Expected m,h, or d, got: {}".format(
-                time_val[-1],
-            ),
-        )
-        return ""
+    message.reply_text(
+        "Invalid time type specified. Expected m,h, or d, got: {}".format(
+            time_val[-1],
+        ),
+    )
+    return ""
 
 
-def markdown_to_html(text: str):
+def markdown_to_html(text):
     text = text.replace("*", "**")
     text = text.replace("`", "```")
     text = text.replace("~", "~~")
-
-    spoiler_pattern = re.compile(r"\|\|(?=\S)(.+?)(?<=\S)\|\|", re.S)
-    text = spoiler_pattern.sub(r"<tg-spoiler>\1</tg-spoiler>", text)
-
     _html = markdown2.markdown(text, extras=["strike", "underline"])
     return bleach.clean(
         _html,
-        tags=["strong", "em", "a", "code", "pre", "strike", "u", "tg-spoiler"],
+        tags=["strong", "em", "a", "code", "pre", "strike", "u"],
         strip=True,
     )[:-1]
