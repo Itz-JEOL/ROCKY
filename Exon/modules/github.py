@@ -3,7 +3,7 @@ import asyncio
 from pyrogram import filters
 from pyrogram.types import Message
 
-from Exon import app as Abishnoi
+from Exon import Abishnoi
 from Exon.modules.helper_funcs import *
 
 
