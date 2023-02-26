@@ -1,8 +1,3 @@
-# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
-# TG :- @Abishnoi1M
-#     MY ALL BOTS :- Abishnoi_bots
-#     GITHUB :- KingAbishnoi ""
-
 from platform import python_version as y
 
 from pyrogram import __version__ as z
