@@ -1,505 +1,515 @@
-from telegram import (
-    ChatMemberAdministrator,
-    ChatMemberRestricted,
-    ChatPermissions,
-    Update,
-)
-from telegram.error import BadRequest
-from telegram.ext import CommandHandler, ContextTypes, filters
+"""
+MIT License
 
-from Exon import DRAGONS, LOGGER, exon
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
+from telegram import ChatPermissions, Update
+from telegram.error import BadRequest, TelegramError
+from telegram.ext import CallbackContext
+
+from Exon import LOGGER
 from Exon.modules.helper_funcs.chat_status import (
+    bot_admin,
+    dev_plus,
     is_bot_admin,
     is_user_ban_protected,
     is_user_in_chat,
 )
+from Exon.modules.helper_funcs.decorators import Exoncmd
 from Exon.modules.helper_funcs.extraction import extract_user_and_text
 
 RBAN_ERRORS = {
-    "ᴜsᴇʀ ɪs ᴀɴ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀ ᴏғ ᴛʜᴇ ᴄʜᴀᴛ",
-    "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ",
-    "ɴᴏᴛ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ʀᴇsᴛʀɪᴄᴛ/ᴜɴʀᴇsᴛʀɪᴄᴛ ᴄʜᴀᴛ ᴍᴇᴍʙᴇʀ",
-    "ᴜsᴇʀ_ɴᴏᴛ_ᴘᴀʀᴛɪᴄɪᴘᴀɴᴛ",
-    "ᴘᴇᴇʀ_ɪᴅ_ɪɴᴠᴀʟɪᴅ",
-    "ɢʀᴏᴜᴘ ᴄʜᴀᴛ ᴡᴀs ᴅᴇᴀᴄᴛɪᴠᴀᴛᴇᴅ",
-    "ɴᴇᴇᴅ ᴛᴏ ʙᴇ ɪɴᴠɪᴛᴇʀ ᴏғ ᴀ ᴜsᴇʀ ᴛᴏ ᴋɪᴄᴋ ɪᴛ ғʀᴏᴍ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ",
-    "ᴄʜᴀᴛ_ᴀᴅᴍɪɴ_ʀᴇǫᴜɪʀᴇᴅ",
-    "ᴏɴʟʏ ᴛʜᴇ ᴄʀᴇᴀᴛᴏʀ ᴏғ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ ᴄᴀɴ ᴋɪᴄᴋ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀs",
-    "ᴄʜᴀɴɴᴇʟ_ᴘʀɪᴠᴀᴛᴇ",
-    "ɴᴏᴛ ɪɴ ᴛʜᴇ ᴄʜᴀᴛ",
+    "User is an administrator of the chat",
+    "Chat not found",
+    "Not enough rights to restrict/unrestrict chat member",
+    "User_not_participant",
+    "Peer_id_invalid",
+    "Group chat was deactivated",
+    "Need to be inviter of a user to punch it from a basic group",
+    "Chat_admin_required",
+    "Only the creator of a basic group can punch group administrators",
+    "Channel_private",
+    "Not in the chat",
 }
 
 RUNBAN_ERRORS = {
-    "ᴜsᴇʀ ɪs ᴀɴ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀ ᴏғ ᴛʜᴇ ᴄʜᴀᴛ",
-    "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ",
-    "ɴᴏᴛ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ʀᴇsᴛʀɪᴄᴛ/ʀᴇsᴛʀɪᴄ ᴄʜᴀᴛ ᴍᴇᴍʙᴇʀ",
-    "ᴜsᴇʀ_ɴᴏᴛ_ᴘᴀʀᴛɪᴄɪᴘᴀɴᴛ",
-    "ᴘᴇᴇʀ_ɪᴅ_ɪɴᴠᴀʟɪᴅ",
-    "ɢʀᴏᴜᴘ ᴄʜᴀᴛ ᴡᴀs ᴅᴇᴀᴄᴛɪᴠᴀᴛᴇᴅ",
-    "ɴᴇᴇᴅ ᴛᴏ ʙᴇ ɪɴᴠɪᴛᴇʀ ᴏғ ᴀ ᴜsᴇʀ ᴛᴏ ᴋɪᴄᴋ ɪᴛ ғʀᴏᴍ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ",
-    "ᴄʜᴀᴛ_ᴀᴅᴍɪɴ_ʀᴇǫᴜɪʀᴇᴅ",
-    "ᴏɴʟʏ ᴛʜᴇ ᴄʀᴇᴀᴛᴏʀ ᴏғ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ ᴄᴀɴ ᴋɪᴄᴋ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀs",
-    "ᴄʜᴀɴɴᴇʟ_ᴘʀɪᴠᴀᴛᴇ",
-    "ɴᴏᴛ ɪɴ ᴛʜᴇ ᴄʜᴀᴛ",
+    "User is an administrator of the chat",
+    "Chat not found",
+    "Not enough rights to restrict/unrestrict chat member",
+    "User_not_participant",
+    "Peer_id_invalid",
+    "Group chat was deactivated",
+    "Need to be inviter of a user to punch it from a basic group",
+    "Chat_admin_required",
+    "Only the creator of a basic group can punch group administrators",
+    "Channel_private",
+    "Not in the chat",
 }
 
 RKICK_ERRORS = {
-    "ᴜsᴇʀ ɪs ᴀɴ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀ ᴏғ ᴛʜᴇ ᴄʜᴀᴛ",
-    "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ",
-    "ɴᴏᴛ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ʀᴇsᴛʀɪᴄᴛ/ᴜɴʀᴇsᴛʀɪᴄᴛ ᴄʜᴀᴛ ᴍᴇᴍʙᴇʀ",
-    "ᴜsᴇʀ_ɴᴏᴛ_ᴘᴀʀᴛɪᴄɪᴘᴀɴᴛ",
-    "ᴘᴇᴇʀ_ɪᴅ_ɪɴᴠᴀʟɪᴅ",
-    "ɢʀᴏᴜᴘ ᴄʜᴀᴛ ᴡᴀs ᴅᴇᴀᴄᴛɪᴠᴀᴛᴇᴅ",
-    "ɴᴇᴇᴅ ᴛᴏ ʙᴇ ɪɴᴠɪᴛᴇʀ ᴏғ ᴀ ᴜsᴇʀ ᴛᴏ ᴋɪᴄᴋ ɪᴛ ғʀᴏᴍ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ",
-    "ᴄʜᴀᴛ_ᴀᴅᴍɪɴ_ʀᴇǫᴜɪʀᴇᴅ",
-    "ᴏɴʟʏ ᴛʜᴇ ᴄʀᴇᴀᴛᴏʀ ᴏғ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ ᴄᴀɴ ᴋɪᴄᴋ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀs",
-    "ᴄʜᴀɴɴᴇʟ_ᴘʀɪᴠᴀᴛᴇ",
-    "ɴᴏᴛ ɪɴ ᴛʜᴇ ᴄʜᴀᴛ",
+    "User is an administrator of the chat",
+    "Chat not found",
+    "Not enough rights to restrict/unrestrict chat member",
+    "User_not_participant",
+    "Peer_id_invalid",
+    "Group chat was deactivated",
+    "Need to be inviter of a user to punch it from a basic group",
+    "Chat_admin_required",
+    "Only the creator of a basic group can punch group administrators",
+    "Channel_private",
+    "Not in the chat",
 }
 
 RMUTE_ERRORS = {
-    "ᴜsᴇʀ ɪs ᴀɴ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀ ᴏғ ᴛʜᴇ ᴄʜᴀᴛ",
-    "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ",
-    "ɴᴏᴛ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ʀᴇsᴛʀɪᴄᴛ/ᴜɴʀᴇsᴛʀɪᴄᴛ ᴄʜᴀᴛ ᴍᴇᴍʙᴇʀ",
-    "ᴜsᴇʀ_ɴᴏᴛ_ᴘᴀʀᴛɪᴄɪᴘᴀɴᴛ",
-    "ᴘᴇᴇʀ_ɪᴅ_ɪɴᴠᴀʟɪᴅ",
-    "ɢʀᴏᴜᴘ ᴄʜᴀᴛ ᴡᴀs ᴅᴇᴀᴄᴛɪᴠᴀᴛᴇᴅ",
-    "ɴᴇᴇᴅ ᴛᴏ ʙᴇ ɪɴᴠɪᴛᴇʀ ᴏғ ᴀ ᴜsᴇʀ ᴛᴏ ᴋɪᴄᴋ ɪᴛ ғʀᴏᴍ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ",
-    "ᴄʜᴀᴛ_ᴀᴅᴍɪɴ_ʀᴇǫᴜɪʀᴇᴅ",
-    "ᴏɴʟʏ ᴛʜᴇ ᴄʀᴇᴀᴛᴏʀ ᴏғ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ ᴄᴀɴ ᴋɪᴄᴋ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀs",
-    "ᴄʜᴀɴɴᴇʟ_ᴘʀɪᴠᴀᴛᴇ",
-    "ɴᴏᴛ ɪɴ ᴛʜᴇ ᴄʜᴀᴛ",
+    "User is an administrator of the chat",
+    "Chat not found",
+    "Not enough rights to restrict/unrestrict chat member",
+    "User_not_participant",
+    "Peer_id_invalid",
+    "Group chat was deactivated",
+    "Need to be inviter of a user to punch it from a basic group",
+    "Chat_admin_required",
+    "Only the creator of a basic group can punch group administrators",
+    "Channel_private",
+    "Not in the chat",
 }
 
 RUNMUTE_ERRORS = {
-    "ᴜsᴇʀ ɪs ᴀɴ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀ ᴏғ ᴛʜᴇ ᴄʜᴀᴛ",
-    "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ",
-    "ɴᴏᴛ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ʀᴇsᴛʀɪᴄᴛ/ᴜɴʀᴇsᴛʀɪᴄᴛ ᴄʜᴀᴛ ᴍᴇᴍʙᴇʀ",
-    "ᴜsᴇʀ_ɴᴏᴛ_ᴘᴀʀᴛɪᴄɪᴘᴀɴᴛ",
-    "ᴘᴇᴇʀ_ɪᴅ_ɪɴᴠᴀʟɪᴅ",
-    "ɢʀᴏᴜᴘ ᴄʜᴀᴛ ᴡᴀs ᴅᴇᴀᴄᴛɪᴠᴀᴛᴇᴅ",
-    "ɴᴇᴇᴅ ᴛᴏ ʙᴇ ɪɴᴠɪᴛᴇʀ ᴏғ ᴀ ᴜsᴇʀ ᴛᴏ ᴋɪᴄᴋ ɪᴛ ғʀᴏᴍ ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ",
-    "ᴄʜᴀᴛ_ᴀᴅᴍɪɴ_ʀᴇǫᴜɪʀᴇᴅ",
-    "ᴏɴʟʏ ᴛʜᴇ ᴄʀᴇᴀᴛᴏʀ of ᴀ ʙᴀsɪᴄ ɢʀᴏᴜᴘ ᴄᴀɴ ᴋɪᴄᴋ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴɪsᴛʀᴀᴛᴏʀs",
-    "ᴄʜᴀɴɴᴇʟ_ᴘʀɪᴠᴀᴛᴇ",
-    "ɴᴏᴛ ɪɴ ᴛʜᴇ ᴄʜᴀᴛ",
+    "User is an administrator of the chat",
+    "Chat not found",
+    "Not enough rights to restrict/unrestrict chat member",
+    "User_not_participant",
+    "Peer_id_invalid",
+    "Group chat was deactivated",
+    "Need to be inviter of a user to punch it from a basic group",
+    "Chat_admin_required",
+    "Only the creator of a basic group can punch group administrators",
+    "Channel_private",
+    "Not in the chat",
 }
 
 
-async def rban(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@Exoncmd(command="rban")
+@bot_admin
+def rban(update: Update, context: CallbackContext):
     bot, args = context.bot, context.args
     message = update.effective_message
 
     if not args:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ/ᴜsᴇʀ.")
+        message.reply_text("You don't seem to be referring to a chat/user.")
         return
 
-    user_id, chat_id = await extract_user_and_text(message, context, args)
+    user_id, chat_id = extract_user_and_text(message, args)
 
     if not user_id:
-        await message.reply_text(
-            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
+        message.reply_text(
+            "You don't seem to be referring to a user or the ID specified is incorrect..",
         )
         return
-    elif not chat_id:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ.")
+    if not chat_id:
+        message.reply_text("You don't seem to be referring to a chat.")
         return
 
     try:
-        chat = await bot.get_chat(chat_id.split()[0])
+        chat = bot.get_chat(chat_id.split()[0])
     except BadRequest as excp:
         if excp.message == "Chat not found":
-            await message.reply_text(
-                "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ! ᴍᴀᴋᴇ sᴜʀᴇ ʏᴏᴜ ᴇɴᴛᴇʀᴇᴅ ᴀ ᴠᴀʟɪᴅ ᴄʜᴀᴛ ɪᴅ ᴀɴᴅ I'ᴍ ᴘᴀʀᴛ ᴏғ ᴛʜᴀᴛ ᴄʜᴀᴛ.",
+            message.reply_text(
+                "Chat not found! Make sure you entered a valid chat ID and I'm part of that chat.",
             )
             return
-        else:
-            raise
+        raise
 
     if chat.type == "private":
-        await message.reply_text("ɪ'ᴍ sᴏʀʀʏ, ʙᴜᴛ ᴛʜᴀᴛ's ᴀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ!")
+        message.reply_text("I'm sorry, but that's a private chat!")
         return
 
-    bot_member = await chat.get_member(bot.id)
-
-    if isinstance(bot_member, ChatMemberAdministrator):
-        bot_can_restrict_members = bot_member.can_restrict_members
-
-        if not is_bot_admin(chat, bot.id) or not bot_can_restrict_members:
-            await message.reply_text(
-                "I ᴄᴀɴ'ᴛ ʀᴇsᴛʀɪᴄᴛ ᴘᴇᴏᴘʟᴇ ᴛʜᴇʀᴇ! ᴍᴀᴋᴇ sᴜʀᴇ ɪ'ᴍ ᴀᴅᴍɪɴ ᴀɴᴅ ᴄᴀɴ ʙᴀɴ ᴜsᴇʀs.",
-            )
-            return
+    if (
+        not is_bot_admin(chat, bot.id)
+        or not chat.get_member(bot.id).can_restrict_members
+    ):
+        message.reply_text(
+            "I can't restrict people there! Make sure I'm admin and can ban users.",
+        )
+        return
 
     try:
-        member = await chat.get_member(user_id)
+        member = chat.get_member(user_id)
     except BadRequest as excp:
         if excp.message == "User not found":
-            await message.reply_text("I ᴄᴀɴ'ᴛ sᴇᴇᴍ ᴛᴏ ғɪɴᴅ ᴛʜɪs ᴜsᴇʀ")
+            message.reply_text("I can't seem to find this user")
             return
-        else:
-            raise
+        raise
 
-    if await is_user_ban_protected(chat, user_id, member):
-        await message.reply_text("I ʀᴇᴀʟʟʏ ᴡɪsʜ ɪ ᴄᴏᴜʟᴅ ʙᴀɴ ᴀᴅᴍɪɴs...")
+    if is_user_ban_protected(chat, user_id, member):
+        message.reply_text("I really wish I could ban admins...")
         return
 
     if user_id == bot.id:
-        await message.reply_text("I'ᴍ ɴᴏᴛ ɢᴏɴɴᴀ BAN ᴍʏsᴇʟғ, ᴀʀᴇ ʏᴏᴜ ᴄʀᴀᴢʏ?")
+        message.reply_text("I'm not gonna BAN myself, are you crazy?")
         return
 
     try:
-        await chat.ban_member(user_id)
-        await message.reply_text("ʙᴀɴɴᴇᴅ ғʀᴏᴍ ᴄʜᴀᴛ!")
+        chat.ban_member(user_id)
+        message.reply_text("Banned from chat!")
     except BadRequest as excp:
-        if excp.message == "ʀᴇᴘʟʏ ᴍᴇssᴀɢᴇ ɴᴏᴛ ғᴏᴜɴᴅ":
+        if excp.message == "Reply message not found":
             # Do not reply
-            await message.reply_text("ʙᴀɴɴᴇᴅ!", quote=False)
+            message.reply_text("Banned!", quote=False)
         elif excp.message in RBAN_ERRORS:
-            await message.reply_text(excp.message)
+            message.reply_text(excp.message)
         else:
             LOGGER.warning(update)
             LOGGER.exception(
-                "ᴇʀʀᴏʀ ʙᴀɴɴɪɴɢ ᴜsᴇʀ %s ɪɴ ᴄʜᴀᴛ %s (%s) ᴅᴜᴇ ᴛᴏ %s",
+                "ERROR banning user %s in chat %s (%s) due to %s",
                 user_id,
                 chat.title,
                 chat.id,
                 excp.message,
             )
-            await message.reply_text("ᴡᴇʟʟ ᴅᴀᴍɴ, I ᴄᴀɴ'ᴛ ʙᴀɴ ᴛʜᴀᴛ ᴜsᴇʀ.")
+            message.reply_text("Well damn, I can't ban that user.")
 
 
-async def runban(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@Exoncmd(command="runban")
+@bot_admin
+def runban(update: Update, context: CallbackContext):
     bot, args = context.bot, context.args
     message = update.effective_message
 
     if not args:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ/ᴜsᴇʀ.")
+        message.reply_text("You don't seem to be referring to a chat/user.")
         return
 
-    user_id, chat_id = await extract_user_and_text(message, context, args)
+    user_id, chat_id = extract_user_and_text(message, args)
 
     if not user_id:
-        await message.reply_text(
-            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
+        message.reply_text(
+            "You don't seem to be referring to a user or the ID specified is incorrect..",
         )
         return
-    elif not chat_id:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ.")
+    if not chat_id:
+        message.reply_text("You don't seem to be referring to a chat.")
         return
 
     try:
-        chat = await bot.get_chat(chat_id.split()[0])
+        chat = bot.get_chat(chat_id.split()[0])
     except BadRequest as excp:
         if excp.message == "Chat not found":
-            await message.reply_text(
-                "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ! ᴍᴀᴋᴇ sᴜʀᴇ ʏᴏᴜ ᴇɴᴛᴇʀᴇᴅ ᴀ ᴠᴀʟɪᴅ ᴄʜᴀᴛ ID ᴀɴᴅ I'ᴍ ᴘᴀʀᴛ ᴏғ ᴛʜᴀᴛ ᴄʜᴀᴛ.",
+            message.reply_text(
+                "Chat not found! Make sure you entered a valid chat ID and I'm part of that chat.",
             )
             return
-        else:
-            raise
+        raise
 
     if chat.type == "private":
-        await message.reply_text("I'ᴍ sᴏʀʀʏ, ʙᴜᴛ ᴛʜᴀᴛ's ᴀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ!")
+        message.reply_text("I'm sorry, but that's a private chat!")
         return
 
-    bot_member = await chat.get_member(bot.id)
-
-    if isinstance(bot_member, ChatMemberAdministrator):
-        bot_can_restrict_members = bot_member.can_restrict_members
-
-        if not is_bot_admin(chat, bot.id) or not bot_can_restrict_members:
-            await message.reply_text(
-                "I ᴄᴀɴ'ᴛ ᴜɴʀᴇsᴛʀɪᴄᴛ ᴘᴇᴏᴘʟᴇ ᴛʜᴇʀᴇ! ᴍᴀᴋᴇ sᴜʀᴇ I'ᴍ ᴀᴅᴍɪɴ ᴀɴᴅ ᴄᴀɴ ᴜɴʙᴀɴ ᴜsᴇʀs.",
-            )
-            return
+    if (
+        not is_bot_admin(chat, bot.id)
+        or not chat.get_member(bot.id).can_restrict_members
+    ):
+        message.reply_text(
+            "I can't unrestrict people there! Make sure I'm admin and can unban users.",
+        )
+        return
 
     try:
-        await chat.get_member(user_id)
+        chat.get_member(user_id)
     except BadRequest as excp:
         if excp.message == "User not found":
-            await message.reply_text("I ᴄᴀɴ'ᴛ sᴇᴇᴍ ᴛᴏ ғɪɴᴅ ᴛʜɪs ᴜsᴇʀ ᴛʜᴇʀᴇ")
+            message.reply_text("I can't seem to find this user there")
             return
-        else:
-            raise
+        raise
 
-    if await is_user_in_chat(chat, user_id):
-        await message.reply_text(
-            "ᴡʜʏ ᴀʀᴇ ʏᴏᴜ ᴛʀʏɪɴɢ ᴛᴏ ʀᴇᴍᴏᴛᴇʟʏ ᴜɴʙᴀɴ sᴏᴍᴇᴏɴᴇ ᴛʜᴀᴛ's ᴀʟʀᴇᴀᴅʏ ɪɴ ᴛʜᴀᴛ ᴄʜᴀᴛ?",
+    if is_user_in_chat(chat, user_id):
+        message.reply_text(
+            "Why are you trying to remotely unban someone that's already in that chat?",
         )
         return
 
     if user_id == bot.id:
-        await message.reply_text("I'ᴍ ɴᴏᴛ ɢᴏɴɴᴀ UNBAN ᴍʏsᴇʟғ, ɪ'ᴍ ᴀɴ ᴀᴅᴍɪɴ ᴛʜᴇʀᴇ!")
+        message.reply_text("I'm not gonna UNBAN myself, I'm an admin there!")
         return
 
     try:
         chat.unban_member(user_id)
-        await message.reply_text("ʏᴇᴘ, ᴛʜɪs ᴜsᴇʀ ᴄᴀɴ ᴊᴏɪɴ ᴛʜᴀᴛ ᴄʜᴀᴛ!")
+        message.reply_text("Yep, this user can join that chat!")
     except BadRequest as excp:
-        if excp.message == "ʀᴇᴘʟʏ ᴍᴇssᴀɢᴇ ɴᴏᴛ ғᴏᴜɴᴅ":
+        if excp.message == "Reply message not found":
             # Do not reply
-            await message.reply_text("ᴜɴʙᴀɴɴᴇᴅ!", quote=False)
+            message.reply_text("Unbanned!", quote=False)
         elif excp.message in RUNBAN_ERRORS:
-            await message.reply_text(excp.message)
+            message.reply_text(excp.message)
         else:
             LOGGER.warning(update)
             LOGGER.exception(
-                "ERROR ᴜɴʙᴀɴɴɪɴɢ ᴜsᴇʀ %s ɪɴ ᴄʜᴀᴛ %s (%s) ᴅᴜᴇ ᴛᴏ %s",
+                "ERROR unbanning user %s in chat %s (%s) due to %s",
                 user_id,
                 chat.title,
                 chat.id,
                 excp.message,
             )
-            await message.reply_text("ᴡᴇʟʟ ᴅᴀᴍɴ, I ᴄᴀɴ'ᴛ ᴜɴʙᴀɴ ᴛʜᴀᴛ ᴜsᴇʀ.")
+            message.reply_text("Well damn, I can't unban that user.")
 
 
-async def rkick(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@Exoncmd(command="rkick")
+@bot_admin
+def rkick(update: Update, context: CallbackContext):
     bot, args = context.bot, context.args
     message = update.effective_message
 
     if not args:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ/ᴜsᴇʀ.")
+        message.reply_text("You don't seem to be referring to a chat/user.")
         return
 
-    user_id, chat_id = await extract_user_and_text(message, context, args)
+    user_id, chat_id = extract_user_and_text(message, args)
 
     if not user_id:
-        await message.reply_text(
-            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
+        message.reply_text(
+            "You don't seem to be referring to a user or the ID specified is incorrect..",
         )
         return
-    elif not chat_id:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ.")
+    if not chat_id:
+        message.reply_text("You don't seem to be referring to a chat.")
         return
 
     try:
-        chat = await bot.get_chat(chat_id.split()[0])
+        chat = bot.get_chat(chat_id.split()[0])
     except BadRequest as excp:
-        if excp.message == "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ":
-            await message.reply_text(
-                "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ! ᴍᴀᴋᴇ sᴜʀᴇ ʏᴏᴜ ᴇɴᴛᴇʀᴇᴅ ᴀ ᴠᴀʟɪᴅ ᴄʜᴀᴛ ɪᴅ ᴀɴᴅ I'ᴍ ᴘᴀʀᴛ ᴏғ ᴛʜᴀᴛ ᴄʜᴀᴛ.",
+        if excp.message == "Chat not found":
+            message.reply_text(
+                "Chat not found! Make sure you entered a valid chat ID and I'm part of that chat.",
             )
             return
-        else:
-            raise
+        raise
 
     if chat.type == "private":
-        await message.reply_text("ɪ'ᴍ sᴏʀʀʏ, ʙᴜᴛ ᴛʜᴀᴛ's ᴀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ!")
+        message.reply_text("I'm sorry, but that's a private chat!")
         return
 
-    bot_member = await chat.get_member(bot.id)
-
-    if isinstance(bot_member, ChatMemberAdministrator):
-        bot_can_restrict_members = bot_member.can_restrict_members
-
-        if not is_bot_admin(chat, bot.id) or not bot_can_restrict_members:
-            await message.reply_text(
-                "I ᴄᴀɴ'ᴛ ʀᴇsᴛʀɪᴄᴛ ᴘᴇᴏᴘʟᴇ ᴛʜᴇʀᴇ! ᴍᴀᴋᴇ sᴜʀᴇ I'ᴍ ᴀᴅᴍɪɴ ᴀɴᴅ ᴄᴀɴ ᴋɪᴄᴋ ᴜsᴇʀs.",
-            )
-            return
+    if (
+        not is_bot_admin(chat, bot.id)
+        or not chat.get_member(bot.id).can_restrict_members
+    ):
+        message.reply_text(
+            "I can't restrict people there! Make sure I'm admin and can punch users.",
+        )
+        return
 
     try:
-        member = await chat.get_member(user_id)
+        member = chat.get_member(user_id)
     except BadRequest as excp:
         if excp.message == "User not found":
-            await message.reply_text("I ᴄᴀɴ'ᴛ sᴇᴇᴍ ᴛᴏ ғɪɴᴅ ᴛʜɪs ᴜsᴇʀ")
+            message.reply_text("I can't seem to find this user")
             return
-        else:
-            raise
+        raise
 
-    if await is_user_ban_protected(chat, user_id, member):
-        await message.reply_text("I ʀᴇᴀʟʟʏ ᴡɪsʜ I ᴄᴏᴜʟᴅ ᴋɪᴄᴋ ᴀᴅᴍɪɴs...")
+    if is_user_ban_protected(chat, user_id, member):
+        message.reply_text("I really wish I could punch admins...")
         return
 
     if user_id == bot.id:
-        await message.reply_text("I'm ɴᴏᴛ ɢᴏɴɴᴀ ᴋɪᴄᴋ ᴍʏsᴇʟғ, ᴀʀᴇ ʏᴏᴜ ᴄʀᴀᴢʏ?")
+        message.reply_text("I'm not gonna punch myself, are you crazy?")
         return
 
     try:
         chat.unban_member(user_id)
-        await message.reply_text("ᴋɪᴄᴋᴇᴅ ғʀᴏᴍ ᴄʜᴀᴛ!")
+        message.reply_text("Punched from chat!")
     except BadRequest as excp:
-        if excp.message == "ʀᴇᴘʟʏ ᴍᴇssᴀɢᴇ ɴᴏᴛ ғᴏᴜɴᴅ":
+        if excp.message == "Reply message not found":
             # Do not reply
-            await message.reply_text("ᴋɪᴄᴋᴇᴅ!", quote=False)
+            message.reply_text("Punched!", quote=False)
         elif excp.message in RKICK_ERRORS:
-            await message.reply_text(excp.message)
+            message.reply_text(excp.message)
         else:
             LOGGER.warning(update)
             LOGGER.exception(
-                "ERROR ᴋɪᴄᴋɪɴɢ ᴜsᴇʀ %s ɪɴ ᴄʜᴀᴛ %s (%s) ᴅᴜᴇ ᴛᴏ %s",
+                "ERROR punching user %s in chat %s (%s) due to %s",
                 user_id,
                 chat.title,
                 chat.id,
                 excp.message,
             )
-            await message.reply_text("ᴡᴇʟʟ ᴅᴀᴍɴ, I ᴄᴀɴ'ᴛ ᴋɪᴄᴋ ᴛʜᴀᴛ ᴜsᴇʀ.")
+            message.reply_text("Well damn, I can't punch that user.")
 
 
-async def rmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@Exoncmd(command="rmute")
+@bot_admin
+def rmute(update: Update, context: CallbackContext):
     bot, args = context.bot, context.args
     message = update.effective_message
 
     if not args:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ/ᴜsᴇʀ.")
+        message.reply_text("You don't seem to be referring to a chat/user.")
         return
 
-    user_id, chat_id = await extract_user_and_text(message, context, args)
+    user_id, chat_id = extract_user_and_text(message, args)
 
     if not user_id:
-        await message.reply_text(
-            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
+        message.reply_text(
+            "You don't seem to be referring to a user or the ID specified is incorrect..",
         )
         return
-    elif not chat_id:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ.")
+    if not chat_id:
+        message.reply_text("You don't seem to be referring to a chat.")
         return
 
     try:
-        chat = await bot.get_chat(chat_id.split()[0])
+        chat = bot.get_chat(chat_id.split()[0])
     except BadRequest as excp:
         if excp.message == "Chat not found":
-            await message.reply_text(
-                "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ! ᴍᴀᴋᴇ sᴜʀᴇ ʏᴏᴜ ᴇɴᴛᴇʀᴇᴅ ᴀ ᴠᴀʟɪᴅ ᴄʜᴀᴛ ɪᴅ ᴀɴᴅ I'ᴍ ᴘᴀʀᴛ ᴏғ ᴛʜᴀᴛ ᴄʜᴀᴛ.",
+            message.reply_text(
+                "Chat not found! Make sure you entered a valid chat ID and I'm part of that chat.",
             )
             return
-        else:
-            raise
+        raise
 
     if chat.type == "private":
-        await message.reply_text("I'ᴍ sᴏʀʀʏ, ʙᴜᴛ ᴛʜᴀᴛ's ᴀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ!")
+        message.reply_text("I'm sorry, but that's a private chat!")
         return
 
-    bot_member = await chat.get_member(bot.id)
-
-    if isinstance(bot_member, ChatMemberAdministrator):
-        bot_can_restrict_members = bot_member.can_restrict_members
-
-        if not is_bot_admin(chat, bot.id) or not bot_can_restrict_members:
-            await message.reply_text(
-                "I ᴄᴀɴ'ᴛ ʀᴇsᴛʀɪᴄᴛ ᴘᴇᴏᴘʟᴇ ᴛʜᴇʀᴇ! ᴍᴀᴋᴇ sᴜʀᴇ I'ᴍ ᴀᴅᴍɪɴ ᴀɴᴅ ᴄᴀɴ ᴍᴜᴛᴇ ᴜsᴇʀs.",
-            )
-            return
+    if (
+        not is_bot_admin(chat, bot.id)
+        or not chat.get_member(bot.id).can_restrict_members
+    ):
+        message.reply_text(
+            "I can't restrict people there! Make sure I'm admin and can mute users.",
+        )
+        return
 
     try:
-        member = await chat.get_member(user_id)
+        member = chat.get_member(user_id)
     except BadRequest as excp:
         if excp.message == "User not found":
-            await message.reply_text("I ᴄᴀɴ'ᴛ sᴇᴇᴍ ᴛᴏ ғɪɴᴅ ᴛʜɪs ᴜsᴇʀ")
-            ʀᴇᴛᴜʀɴ
-        else:
-            raise
+            message.reply_text("I can't seem to find this user")
+            return
+        raise
 
-    if await is_user_ban_protected(chat, user_id, member):
-        await message.reply_text("I ʀᴇᴀʟʟʏ ᴡɪsʜ I ᴄᴏᴜʟᴅ ᴍᴜᴛᴇ ᴀᴅᴍɪɴs...")
+    if is_user_ban_protected(chat, user_id, member):
+        message.reply_text("I really wish I could mute admins...")
         return
 
     if user_id == bot.id:
-        await message.reply_text("I'ᴍ ɴᴏᴛ ɢᴏɴɴᴀ MUTE ᴍʏsᴇʟғ, ᴀʀᴇ ʏᴏᴜ crazy?")
+        message.reply_text("I'm not gonna MUTE myself, are you crazy?")
         return
 
     try:
-        await bot.restrict_chat_member(
+        bot.restrict_chat_member(
             chat.id,
             user_id,
             permissions=ChatPermissions(can_send_messages=False),
         )
-        await message.reply_text("ᴍᴜᴛᴇᴅ ғʀᴏᴍ ᴛʜᴇ ᴄʜᴀᴛ!")
+        message.reply_text("Muted from the chat!")
     except BadRequest as excp:
-        if excp.message == "ʀᴇᴘʟʏ ᴍᴇssᴀɢᴇ ɴᴏᴛ ғᴏᴜɴᴅ":
+        if excp.message == "Reply message not found":
             # Do not reply
-            await message.reply_text("ᴍᴜᴛᴇᴅ!", quote=False)
+            message.reply_text("Muted!", quote=False)
         elif excp.message in RMUTE_ERRORS:
-            await message.reply_text(excp.message)
+            message.reply_text(excp.message)
         else:
             LOGGER.warning(update)
             LOGGER.exception(
-                "ERROR ᴍᴜᴛᴇ ᴜsᴇʀ %s ɪɴ ᴄʜᴀᴛ %s (%s) ᴅᴜᴇ ᴛᴏ %s",
+                "ERROR mute user %s in chat %s (%s) due to %s",
                 user_id,
                 chat.title,
                 chat.id,
                 excp.message,
             )
-            await message.reply_text("ᴡᴇʟʟ ᴅᴀᴍɴ, I ᴄᴀɴ'ᴛ ᴍᴜᴛᴇ ᴛʜᴀᴛ ᴜsᴇʀ.")
+            message.reply_text("Well damn, I can't mute that user.")
 
 
-async def runmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@Exoncmd(command="runmute")
+@bot_admin
+def runmute(update: Update, context: CallbackContext):
     bot, args = context.bot, context.args
     message = update.effective_message
 
     if not args:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ/ᴜsᴇʀ.")
+        message.reply_text("You don't seem to be referring to a chat/user.")
         return
 
-    user_id, chat_id = await extract_user_and_text(message, context, args)
+    user_id, chat_id = extract_user_and_text(message, args)
 
     if not user_id:
-        await message.reply_text(
-            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ user ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
+        message.reply_text(
+            "You don't seem to be referring to a user or the ID specified is incorrect..",
         )
         return
-    elif not chat_id:
-        await message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴄʜᴀᴛ.")
+    if not chat_id:
+        message.reply_text("You don't seem to be referring to a chat.")
         return
 
     try:
-        chat = await bot.get_chat(chat_id.split()[0])
+        chat = bot.get_chat(chat_id.split()[0])
     except BadRequest as excp:
         if excp.message == "Chat not found":
-            await message.reply_text(
-                "ᴄʜᴀᴛ ɴᴏᴛ ғᴏᴜɴᴅ! Make sure you entered a valid chat ID and I'm part of that chat.",
+            message.reply_text(
+                "Chat not found! Make sure you entered a valid chat ID and I'm part of that chat.",
             )
             return
-        else:
-            raise
+        raise
 
     if chat.type == "private":
-        await message.reply_text("I'ᴍ sᴏʀʀʏ, ʙᴜᴛ ᴛʜᴀᴛ's ᴀ ᴘʀɪᴠᴀᴛᴇ ᴄʜᴀᴛ!")
+        message.reply_text("I'm sorry, but that's a private chat!")
         return
 
-    bot_member = await chat.get_member(bot.id)
-
-    if isinstance(bot_member, ChatMemberAdministrator):
-        bot_can_restrict_members = bot_member.can_restrict_members
-
-        if not is_bot_admin(chat, bot.id) or not bot_can_restrict_members:
-            await message.reply_text(
-                "I ᴄᴀɴ'ᴛ ᴜɴʀᴇsᴛʀɪᴄᴛ ᴘᴇᴏᴘʟᴇ ᴛʜᴇʀᴇ! ᴍᴀᴋᴇ sᴜʀᴇ I'ᴍ ᴀᴅᴍɪɴ ᴀɴᴅ ᴄᴀɴ ᴜɴʙᴀɴ ᴜsᴇʀs.",
-            )
-            return
+    if (
+        not is_bot_admin(chat, bot.id)
+        or not chat.get_member(bot.id).can_restrict_members
+    ):
+        message.reply_text(
+            "I can't unrestrict people there! Make sure I'm admin and can unban users.",
+        )
+        return
 
     try:
-        member = await chat.get_member(user_id)
+        member = chat.get_member(user_id)
     except BadRequest as excp:
-        if excp.message == "ᴜsᴇʀ ɴᴏᴛ ғᴏᴜɴᴅ":
-            await message.reply_text("I ᴄᴀɴ'ᴛ sᴇᴇᴍ ᴛᴏ ғɪɴᴅ ᴛʜɪs ᴜsᴇʀ ᴛʜᴇʀᴇ")
+        if excp.message == "User not found":
+            message.reply_text("I can't seem to find this user there")
             return
-        else:
-            raise
+        raise
 
-    if await is_user_in_chat(chat, user_id):
-        if (
-            (
-                member.can_send_messages
-                and member.can_send_media_messages
-                and member.can_send_other_messages
-                and member.can_add_web_page_previews
-            )
-            if isinstance(member, ChatMemberRestricted)
-            else None
-        ):
-            await message.reply_text(
-                "ᴛʜɪs ᴜsᴇʀ ᴀʟʀᴇᴀᴅʏ ʜᴀs ᴛʜᴇ ʀɪɢʜᴛ ᴛᴏ sᴘᴇᴀᴋ ɪɴ ᴛʜᴀᴛ ᴄʜᴀᴛ."
-            )
-            return
+    if is_user_in_chat(chat, user_id) and (
+        member.can_send_messages
+        and member.can_send_media_messages
+        and member.can_send_other_messages
+        and member.can_add_web_page_previews
+    ):
+        message.reply_text("This user already has the right to speak in that chat.")
+        return
 
     if user_id == bot.id:
-        await message.reply_text("I'ᴍ ɴᴏᴛ ɢᴏɴɴᴀ UNMUTE ᴍʏsᴇʟғ, I'ᴍ an ᴀᴅᴍɪɴ ᴛʜᴇʀᴇ!")
+        message.reply_text("I'm not gonna UNMUTE myself, I'm an admin there!")
         return
 
     try:
-        await bot.restrict_chat_member(
+        bot.restrict_chat_member(
             chat.id,
             int(user_id),
             permissions=ChatPermissions(
@@ -509,33 +519,57 @@ async def runmute(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 can_add_web_page_previews=True,
             ),
         )
-        await message.reply_text("ʏᴇᴘ, ᴛʜɪs ᴜsᴇʀ can talk in that chat!")
+        message.reply_text("Yep, this user can talk in that chat!")
     except BadRequest as excp:
-        if excp.message == "ʀᴇᴘʟʏ ᴍᴇssᴀɢᴇ ɴᴏᴛ ғᴏᴜɴᴅ":
-            # Do not ʀᴇᴘʟʏ
-            await message.reply_text("ᴜɴᴍᴜᴛᴇᴅ!", quote=False)
+        if excp.message == "Reply message not found":
+            # Do not reply
+            message.reply_text("Unmuted!", quote=False)
         elif excp.message in RUNMUTE_ERRORS:
-            await message.reply_text(excp.message)
+            message.reply_text(excp.message)
         else:
             LOGGER.warning(update)
             LOGGER.exception(
-                "ERROR ᴜɴᴍɴᴜᴛɪɴɢ ᴜsᴇʀ %s ɪɴ ᴄʜᴀᴛ %s (%s) ᴅᴜᴇ ᴛᴏ %s",
+                "ERROR unmnuting user %s in chat %s (%s) due to %s",
                 user_id,
                 chat.title,
                 chat.id,
                 excp.message,
             )
-            await message.reply_text("ᴡᴇʟʟ ᴅᴀᴍɴ, I ᴄᴀɴ'ᴛ ᴜɴᴍᴜᴛᴇ ᴛʜᴀᴛ ᴜsᴇʀ.")
+            message.reply_text("Well damn, I can't unmute that user.")
 
 
-RBAN_HANDLER = CommandHandler("rban", rban, filters=filters.User(DRAGONS))
-RUNBAN_HANDLER = CommandHandler("runban", runban, filters=filters.User(DRAGONS))
-RKICK_HANDLER = CommandHandler("rkick", rkick, filters=filters.User(DRAGONS))
-RMUTE_HANDLER = CommandHandler("rmute", rmute, filters=filters.User(DRAGONS))
-RUNMUTE_HANDLER = CommandHandler("runmute", runmute, filters=filters.User(DRAGONS))
+@Exoncmd(command="recho")
+@dev_plus
+def recho(update: Update, context: CallbackContext):
+    bot = context.bot
+    args = context.args
+    message = update.effective_message
+    try:
+        chat_id = str(args[0])
+        del args[0]
+    except TypeError:
+        message.reply_text("Please give me a chat ID.")
+    to_send = " ".join(args)
+    if len(to_send) >= 2:
+        try:
+            bot.sendMessage(int(chat_id), str(to_send))
+        except TelegramError:
+            message.reply_text(
+                "Couldn't send the message. Perhaps I'm not part of that group?"
+            )
 
-exon.add_handler(RBAN_HANDLER)
-exon.add_handler(RUNBAN_HANDLER)
-exon.add_handler(RKICK_HANDLER)
-exon.add_handler(RMUTE_HANDLER)
-exon.add_handler(RUNMUTE_HANDLER)
+
+__mod_name__ = "𝐑-ᴄᴍᴅs"
+
+# ғᴏʀ ʜᴇʟᴘ ᴍᴇɴᴜ
+
+
+# """
+from Exon.modules.language import gs
+
+
+def get_help(chat):
+    return gs(chat, "rcmds_help")
+
+
+# """

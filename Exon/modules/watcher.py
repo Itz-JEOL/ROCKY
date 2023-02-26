@@ -1,31 +1,63 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
 import re
 import time
 
 from pyrogram import filters
 from pyrogram.enums import MessageEntityType
 
-from Exon import app
-from Exon.modules.helper_funcs import get_readable_time
-from Exon.modules.sql.mongo.afk_db import is_afk, remove_afk
+from Exon import BOT_USERNAME
+from Exon import Abishnoi as app
+from Exon.modules.helper_funcs.readable_time import get_readable_time
+from Exon.modules.no_sql.afk_db import is_afk, remove_afk
+
+chat_watcher_group = 1
 
 
 @app.on_message(
     ~filters.me & ~filters.bot & ~filters.via_bot,
-    group=1,
+    group=chat_watcher_group,
 )
 async def chat_watcher_func(_, message):
     if message.sender_chat:
         return
     userid = message.from_user.id
-    bot_username = (await _.get_me()).username
     user_name = message.from_user.first_name
-    possible = ["/afk",f"/afk{bot_username}".lower()]
-    
-    try:
-        if message.text.split()[0].lower() in possible:
-            return 
-    except:
-        pass
+    if message.entities:
+        possible = ["/afk", f"/afk@{BOT_USERNAME}"]
+        message_text = message.text or message.caption
+        for entity in message.entities:
+            if entity.type == MessageEntityType.BOT_COMMAND:
+                if (message_text[0 : 0 + entity.length]).lower() in possible:
+                    return
+
     msg = ""
     replied_user_id = 0
 
@@ -110,7 +142,7 @@ async def chat_watcher_func(_, message):
                                 caption=f"**{replied_first_name[:25]}** ɪs ᴀғᴋ sɪɴᴄᴇ {seenago}\n\nʀᴇᴀsᴏɴ: `{reasonafk}`\n\n",
                             )
                 except Exception:
-                    msg += f"**{replied_first_name}** ɪs ᴀғᴋ\n\n"
+                    msg += f"**{replied_first_name}** ɪs ᴀғᴋ,\nᴩᴀᴛᴀ ɴɪ ʙᴄ ᴋᴀʙ sᴇ\n\n"
         except:
             pass
 
@@ -219,6 +251,3 @@ async def chat_watcher_func(_, message):
             send = await message.reply_text(msg, disable_web_page_preview=True)
         except:
             return
-
-
-#  ᴀғᴋ ᴍᴏᴅᴜʟᴇs  ʙʏ - https://github.com/AnonymousX1025/FallenRobot

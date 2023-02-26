@@ -1,16 +1,88 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
+
+import ast
+import io
 import os
-import re
-import subprocess
 import sys
+import textwrap
 import traceback
+from contextlib import redirect_stdout
 from inspect import getfullargspec
 from io import StringIO
 from time import time
 
 from pyrogram import filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from telegram import ParseMode, Update
+from telegram.ext import CallbackContext, CommandHandler
 
-from Exon import DRAGONS, app
+from Exon import DEV_USERS, LOGGER
+from Exon import Abishnoi as app
+from Exon import dispatcher
+from Exon.modules.helper_funcs.chat_status import dev_plus
+
+namespaces = {}
+
+
+def namespace_of(chat, update, bot):
+    if chat not in namespaces:
+        namespaces[chat] = {
+            "__builtins__": globals()["__builtins__"],
+            "bot": bot,
+            "effective_message": update.effective_message,
+            "effective_user": update.effective_user,
+            "effective_chat": update.effective_chat,
+            "update": update,
+        }
+    return namespaces[chat]
+
+
+def log_input(update):
+    user = update.effective_user.id
+    chat = update.effective_chat.id
+    LOGGER.info(f"IN: {update.effective_message.text} (user={user}, chat={chat})")
+
+
+def send(msg, bot, update):
+    if len(str(msg)) > 2000:
+        with io.BytesIO(str.encode(msg)) as out_file:
+            out_file.name = "output.txt"
+            bot.send_document(chat_id=update.effective_chat.id, document=out_file)
+    else:
+        LOGGER.info(f"OUT: '{msg}'")
+        bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"<b>Result</b>:\n<code>{msg}</code>",
+            parse_mode=ParseMode.HTML,
+        )
 
 
 async def aexec(code, client, message):
@@ -27,13 +99,66 @@ async def edit_or_reply(msg: Message, **kwargs):
     await func(**{k: v for k, v in kwargs.items() if k in spec})
 
 
-@app.on_edited_message(
-    filters.command("eval") & filters.user(DRAGONS) & ~filters.forwarded
+@dev_plus
+def execute(update: Update, context: CallbackContext):
+    bot = context.bot
+    send(do(exec, bot, update), bot, update)
+
+
+def cleanup_code(code):
+    if code.startswith("```") and code.endswith("```"):
+        return "\n".join(code.split("\n")[1:-1])
+    return code.strip("` \n")
+
+
+def do(func, bot, update):
+    log_input(update)
+    content = update.message.text.split(" ", 1)[-1]
+    body = cleanup_code(content)
+    env = namespace_of(update.message.chat_id, update, bot)
+    os.chdir(os.getcwd())
+    with open(
+        os.path.join(os.getcwd(), "Exon/modules/helper_funcs/temp.txt"),
+        "w",
+    ) as temp:
+        temp.write(body)
+    stdout = io.StringIO()
+    to_compile = f'def func():\n{textwrap.indent(body, "  ")}'
+    try:
+        exec(to_compile, env)
+    except Exception as e:
+        return f"{e.__class__.__name__}: {e}"
+    func = env["func"]
+    try:
+        with redirect_stdout(stdout):
+            func_return = func()
+    except Exception:
+        value = stdout.getvalue()
+        return f"{value}{traceback.format_exc()}"
+    else:
+        value = stdout.getvalue()
+        result = None
+        if func_return is None:
+            if value:
+                result = f"{value}"
+            else:
+                try:
+                    result = f"{repr(ast.literal_eval(body, env))}"
+                except:
+                    pass
+        else:
+            result = f"{value}{func_return}"
+        if result:
+            return result
+
+
+@app.on_message(
+    filters.user(DEV_USERS)
+    & ~filters.forwarded
+    & ~filters.via_bot
+    & filters.command(["eval", "e"])
 )
-@app.on_message(filters.command("eval") & filters.user(DRAGONS) & ~filters.forwarded)
 async def executor(client, message):
-    if len(message.command) < 2:
-        return await edit_or_reply(message, text="**ᴡʜᴀᴛ ʏᴏᴜ ᴡᴀɴɴᴀ ᴇxᴇᴄᴜᴛᴇ ʙᴀʙʏ ?**")
     try:
         cmd = message.text.split(" ", maxsplit=1)[1]
     except IndexError:
@@ -60,8 +185,8 @@ async def executor(client, message):
     elif stdout:
         evaluation = stdout
     else:
-        evaluation = "sᴜᴄᴄᴇss"
-    final_output = f"**ᴏᴜᴛᴘᴜᴛ**:\n```{evaluation.strip()}```"
+        evaluation = "Success"
+    final_output = f"**OUTPUT**:\n```{evaluation.strip()}```"
     if len(final_output) > 4096:
         filename = "output.txt"
         with open(filename, "w+", encoding="utf8") as out_file:
@@ -92,12 +217,8 @@ async def executor(client, message):
                 [
                     InlineKeyboardButton(
                         text="⏳",
-                        callback_data=f"runtime {round(t2-t1, 3)} sᴇᴄᴏɴᴅs",
-                    ),
-                    InlineKeyboardButton(
-                        text="🗑",
-                        callback_data=f"close_ |{message.from_user.id}",
-                    ),
+                        callback_data=f"runtime {round(t2-t1, 3)} Seconds",
+                    )
                 ]
             ]
         )
@@ -110,74 +231,21 @@ async def runtime_func_cq(_, cq):
     await cq.answer(runtime, show_alert=True)
 
 
-@app.on_edited_message(
-    filters.command("sh")
-    & filters.user(DRAGONS)
-    & ~filters.forwarded
-    & ~filters.via_bot
+@dev_plus
+def clear(update: Update, context: CallbackContext):
+    bot = context.bot
+    log_input(update)
+    if update.message.chat_id in namespaces:
+        del namespaces[update.message.chat_id]
+    send("Cleared locals.", bot, update)
+
+
+EXEC_HANDLER = CommandHandler(
+    ("x", "ex", "exe", "py"),
+    execute,
+    run_async=True,
 )
-@app.on_message(
-    filters.command("sh")
-    & filters.user(DRAGONS)
-    & ~filters.forwarded
-    & ~filters.via_bot
-)
-async def shellrunner(client, message):
-    if len(message.command) < 2:
-        return await edit_or_reply(message, text="**ᴇxᴀᴍᴩʟᴇ :**\n/sh git pull")
-    text = message.text.split(None, 1)[1]
-    if "\n" in text:
-        code = text.split("\n")
-        output = ""
-        for x in code:
-            shell = re.split(""" (?=(?:[^'"]|'[^']*'|"[^"]*")*$)""", x)
-            try:
-                process = subprocess.Popen(
-                    shell,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                )
-            except Exception as err:
-                print(err)
-                await edit_or_reply(message, text=f"**ᴇʀʀᴏʀ:**\n```{err}```")
-            output += f"**{code}**\n"
-            output += process.stdout.read()[:-1].decode("utf-8")
-            output += "\n"
-    else:
-        shell = re.split(""" (?=(?:[^'"]|'[^']*'|"[^"]*")*$)""", text)
-        for a in range(len(shell)):
-            shell[a] = shell[a].replace('"', "")
-        try:
-            process = subprocess.Popen(
-                shell,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-            )
-        except Exception as err:
-            print(err)
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            errors = traceback.format_exception(
-                etype=exc_type,
-                value=exc_obj,
-                tb=exc_tb,
-            )
-            return await edit_or_reply(
-                message, text=f"**ᴇʀʀᴏʀ:**\n```{''.join(errors)}```"
-            )
-        output = process.stdout.read()[:-1].decode("utf-8")
-    if str(output) == "\n":
-        output = None
-    if output:
-        if len(output) > 4096:
-            with open("output.txt", "w+") as file:
-                file.write(output)
-            await client.send_document(
-                message.chat.id,
-                "output.txt",
-                reply_to_message_id=message.message_id,
-                caption="`Output`",
-            )
-            return os.remove("output.txt")
-        await edit_or_reply(message, text=f"**ᴏᴜᴛᴘᴜᴛ:**\n```{output}```")
-    else:
-        await edit_or_reply(message, text="**ᴏᴜᴛᴘᴜᴛ: **\n`ɴᴏ ᴏᴜᴛᴘᴜᴛ`")
+CLEAR_HANDLER = CommandHandler("clearlocals", clear, run_async=True)
+
+dispatcher.add_handler(EXEC_HANDLER)
+dispatcher.add_handler(CLEAR_HANDLER)

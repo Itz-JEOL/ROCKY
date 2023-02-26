@@ -1,3 +1,33 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
+
 import os
 from time import sleep
 
@@ -15,7 +45,8 @@ from telethon.tl.types import (
 )
 
 from Exon import *
-from Exon import LOGGER, register
+from Exon import LOGGER
+from Exon.events import register
 
 CMD_HELP = "/ !"
 
@@ -36,7 +67,7 @@ async def is_register_admin(chat, user):
 
 
 @register(pattern="^/unbanall$")
-@register(pattern="^/unbanall@{BOT_USERNAME}$")
+@register(pattern="^/unbanall@Exon_Robot$")
 async def _(event):
     chat = await event.get_chat()
     admin = chat.admin_rights.ban_users
@@ -92,7 +123,7 @@ async def _(event):
     await event.reply(required_string.format(p))
 
 
-@register(pattern="^/unmuteall@{BOT_USERNAME}$")
+@register(pattern="^/unmuteall@Exon_Robot$")
 @register(pattern="^/unmuteall$")
 async def _(event):
     if event.is_private:
@@ -160,11 +191,11 @@ async def get_users(show):
     if not await is_register_admin(show.input_chat, show.sender_id):
         return
     info = await telethn.get_entity(show.chat_id)
-    title = info.title or "ᴛʜɪs ᴄʜᴀᴛ"
+    title = info.title or "this chat"
     mentions = f"ᴜꜱᴇʀꜱ ɪɴ {title}: \n"
     async for user in telethn.iter_participants(show.chat_id):
         mentions += (
-            f"\nᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛ {user.id}"
+            f"\n ᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛ {user.id}"
             if user.deleted
             else f"\n[{user.first_name}](tg://user?id={user.id}) {user.id}"
         )
@@ -174,7 +205,7 @@ async def get_users(show):
     await telethn.send_file(
         show.chat_id,
         "userslist.txt",
-        caption=f"ᴜsᴇʀs ɪɴ {title}",
+        caption=f"Users in {title}",
         reply_to=show.id,
     )
 
@@ -183,8 +214,14 @@ async def get_users(show):
 
 __mod_name__ = "𝐔ᴀʟʟ"
 
-__help__ = """
-❍ /unbanall*:* ᴜɴʙᴀɴ ᴀʟʟ 
-❍ /unmuteall*:* ᴜɴᴍᴜᴛᴇ ᴀʟʟ 
-❍ /gusers*:*  ɢʀᴏᴜᴘ ᴍᴇᴍʙᴇʀ ʟɪsᴛ ᴀs .ᴛxᴛ
-"""
+# ғᴏʀ ʜᴇʟᴘ ᴍᴇɴᴜ
+
+# """
+from Exon.modules.language import gs
+
+
+def get_help(chat):
+    return gs(chat, "uall_help")
+
+
+# """

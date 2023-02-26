@@ -1,20 +1,49 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
 from telethon import Button, events, types
 from telethon.errors import ChatAdminRequiredError
 from telethon.errors.rpcerrorlist import UserNotParticipantError
 from telethon.tl.functions.channels import GetParticipantRequest
 
-# ʙʏ @Abishnoi1M
 from Exon import BOT_ID
 from Exon import DRAGONS as DEVS
-from Exon import OWNER_ID, Asuinline
-from Exon import register as Asubot
-from Exon import telethn as abishnoi
-from Exon.modules.sql.mongo import fsub_db as db
+from Exon import OWNER_ID
+from Exon import telethn as Rani
+from Exon.events import Asuinline
+from Exon.events import register as Asubot
+from Exon.modules.no_sql import fsub_db as db
 
 
 async def is_admin(chat_id, user_id):
     try:
-        p = await abishnoi(GetParticipantRequest(chat_id, user_id))
+        p = await Rani(GetParticipantRequest(chat_id, user_id))
     except UserNotParticipantError:
         return False
     if isinstance(p.participant, types.ChannelParticipantAdmin) or isinstance(
@@ -27,7 +56,7 @@ async def is_admin(chat_id, user_id):
 
 async def participant_check(channel, user_id):
     try:
-        await abishnoi(GetParticipantRequest(channel, int(user_id)))
+        await Rani(GetParticipantRequest(channel, int(user_id)))
         return True
     except UserNotParticipantError:
         return False
@@ -90,7 +119,7 @@ async def fsub(event):
         await event.reply(f"✅ **ғᴏʀᴄᴇ sᴜʙsᴄʀɪʙᴇ ɪs ᴇɴᴀʙʟᴇᴅ** to @{channel}.")
 
 
-@abishnoi.on(events.NewMessage())
+@Rani.on(events.NewMessage())
 async def fsub_n(e):
     if not db.fs_settings(e.chat_id):
         return
@@ -145,22 +174,16 @@ async def unmute_fsub(event):
     await event.delete()
 
 
-__help__ = """
-⍟ * ᴇxᴏɴ ᴄᴀɴ ᴍᴜᴛᴇ ᴍᴇᴍʙᴇʀꜱ ᴡʜᴏ ᴀʀᴇ ɴᴏᴛ ꜱᴜʙꜱᴄʀɪʙᴇᴅ ʏᴏᴜʀ ᴄʜᴀɴɴᴇʟ ᴜɴᴛɪʟ ᴛʜᴇʏ ꜱᴜʙꜱᴄʀɪʙᴇ*
-⍟ ᴡʜᴇɴ ᴇɴᴀʙʟᴇᴅ ɪ ᴡɪʟʟ ᴍᴜᴛᴇ ᴜɴꜱᴜʙꜱᴄʀɪʙᴇᴅ ᴍᴇᴍʙᴇʀꜱ ᴀɴᴅ ꜱʜᴏᴡ ᴛʜᴇᴍ ᴀ ᴜɴᴍᴜᴛᴇ ʙᴜᴛᴛᴏɴ. ᴡʜᴇɴ ᴛʜᴇʏ ᴘʀᴇꜱꜱᴇᴅ ᴛʜᴇ ʙᴜᴛᴛᴏɴ ɪ ᴡɪʟʟ ᴜɴᴍᴜᴛᴇ ᴛʜᴇᴍ
-
-⍟ *ꜱᴇᴛᴜᴘ*
-*ᴏɴʟʏ ᴄʀᴇᴀᴛᴏʀ*
-⍟ [ᴀᴅᴅ ᴍᴇ ɪɴ ʏᴏᴜʀ ɢʀᴏᴜᴘ ᴀꜱ ᴀᴅᴍɪɴ](http://t.me/Exon_Robot?startgroup=new)
-⍟ [ᴀᴅᴅ ᴍᴇ ɪɴ your ᴄʜᴀɴɴᴇʟ ᴀꜱ ᴀᴅᴍɪɴ](http://t.me/Exon_Robot?startgroup=new)
- 
-*ᴄᴏᴍᴍᴍᴀɴᴅꜱ*
-⍟ /fsub ᴄʜᴀɴɴᴇʟ ᴜsᴇʀɴᴀᴍᴇ  ᴛᴏ ᴛᴜʀɴ ᴏɴ ᴀɴᴅ sᴇᴛᴜᴘ ᴛʜᴇ ᴄʜᴀɴɴᴇʟ.
-
-💡*ᴅᴏ ᴛʜɪꜱ ғɪʀꜱᴛ...*
-⍟ /fsub - ᴛᴏ ɢᴇᴛ ᴛʜᴇ ᴄᴜʀʀᴇɴᴛ ꜱᴇᴛᴛɪɴɢꜱ.
-⍟ /fsub off - ᴛᴏ ᴛᴜʀɴ ᴏғ ғᴏʀᴄᴇꜱᴜʙꜱᴄʀɪʙᴇ..
-
-💡ɪғ ʏᴏᴜ ᴅɪꜱᴀʙʟᴇ ғꜱᴜʙ, ʏᴏᴜ ɴᴇᴇᴅ ᴛᴏ ꜱᴇᴛ ᴀɢᴀɪɴ ғᴏʀ ᴡᴏʀᴋɪɴɢ /fsub channel username
-"""
 __mod_name__ = "𝐅-sᴜʙ"
+
+# ғᴏʀ ʜᴇʟᴘ ᴍᴇɴᴜ
+
+# """
+from Exon.modules.language import gs
+
+
+def get_help(chat):
+    return gs(chat, "fsub_help")
+
+
+# """

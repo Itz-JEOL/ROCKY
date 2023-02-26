@@ -1,22 +1,44 @@
-import io
+"""
+MIT License
 
-import aiohttp
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
 import httpx
 from pyrogram import Client, filters
 from pyrogram.types import Message
-from telethon.tl import functions, types
 
-from Exon import app as abishnoi
-from Exon import register
-from Exon import telethn as tbot
+from Exon import Abishnoi
 
 timeout = httpx.Timeout(40, pool=None)
 
 http = httpx.AsyncClient(http2=True, timeout=timeout)
 
 
-# Api key used in weather.com's mobile app. @Abishnoi1M
-
+# Api key used in weather.com's mobile app.
 weather_apikey = "8de2d8b3a93542c9a2d8b3a935a2c909"
 
 get_coords = "https://api.weather.com/v3/location/search"
@@ -27,7 +49,7 @@ headers = {
 }
 
 
-@abishnoi.on_message(filters.command("weather"))
+@Abishnoi.on_message(filters.command("weather"))
 async def weather(c: Client, m: Message):
     if len(m.command) == 1:
         return await m.reply_text(
@@ -75,39 +97,3 @@ async def weather(c: Client, m: Message):
         )
 
         await m.reply_text(res)
-
-
-async def is_register_admin(chat, user):
-    if isinstance(chat, (types.InputPeerChannel, types.InputChannel)):
-        return isinstance(
-            (
-                await tbot(functions.channels.GetParticipantRequest(chat, user))
-            ).participant,
-            (types.ChannelParticipantAdmin, types.ChannelParticipantCreator),
-        )
-    if isinstance(chat, types.InputPeerUser):
-        return True
-
-
-@register(pattern="^/mosam (.*)")
-async def _(event):
-    if event.fwd_from:
-        return
-
-    sample_url = "https://wttr.in/{}.png"
-    input_str = event.pattern_match.group(1)
-    async with aiohttp.ClientSession() as session:
-        response_api_zero = await session.get(sample_url.format(input_str))
-        response_api = await response_api_zero.read()
-        with io.BytesIO(response_api) as out_file:
-            await event.reply(file=out_file)
-
-
-__help__ = """
-*ɪ ᴄᴀɴ ғɪɴᴅ ᴡᴇᴀᴛʜᴇʀ ᴏғ ᴀʟʟ ᴄɪᴛɪᴇs*
-❍ /weather*:*  ɢᴇᴛ ɪɴғᴏʀᴍᴀᴛɪᴏɴ ᴀʙᴏᴜᴛ ᴛʜᴇ ᴡᴇᴀᴛʜᴇʀ 
-❍ /mosam <ᴄɪᴛʏ>*:* ᴀᴅᴠᴀɴᴄᴇᴅ ᴡᴇᴀᴛʜᴇʀ ᴍᴏᴅᴜʟᴇ, ᴜsᴀɢᴇ sᴀᴍᴇ ᴀs /weather
-❍ /mosam moon*:* ɢᴇᴛ ᴛʜᴇ ᴄᴜʀʀᴇɴᴛ sᴛᴀᴛᴜs ᴏғ ᴍᴏᴏɴ
-"""
-
-__mod_name__ = "𝐖ᴇᴀᴛʜᴇʀ"

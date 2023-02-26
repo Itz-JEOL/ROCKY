@@ -1,190 +1,938 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+import asyncio
 import html
+import os
+from typing import Optional
 
-from telegram import (
-    ChatMemberAdministrator,
-    ChatMemberOwner,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    Update,
-)
-from telegram.constants import ChatID, ChatMemberStatus, ChatType, ParseMode
+from pyrogram import enums, filters
+from pyrogram.enums import ChatMemberStatus
+from pyrogram.errors import FloodWait
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode, Update, User
 from telegram.error import BadRequest
-from telegram.ext import CallbackQueryHandler, CommandHandler, ContextTypes, filters
-from telegram.helpers import mention_html
+from telegram.ext import CallbackContext, CommandHandler, Filters
+from telegram.utils.helpers import mention_html
+from telethon import *
+from telethon import events
+from telethon.tl import *
+from telethon.tl import functions, types
 
-from Exon import DRAGONS, exon
+from Exon import Abishnoi, dispatcher
+from Exon import telethn as bot
+from Exon.modules.connection import connected
 from Exon.modules.disable import DisableAbleCommandHandler
-from Exon.modules.helper_funcs.alternate import send_message
+from Exon.modules.helper_funcs.alternate import typing_action
 from Exon.modules.helper_funcs.chat_status import (
     ADMIN_CACHE,
-    check_admin,
+    bot_admin,
+    can_pin,
+    can_promote,
     connection_status,
+    user_admin,
+    user_can_changeinfo,
+    user_can_promote,
 )
 from Exon.modules.helper_funcs.extraction import extract_user, extract_user_and_text
 from Exon.modules.log_channel import loggable
 
 
-@connection_status
-@loggable
-@check_admin(permission="can_promote_members", is_both=True)
-async def promote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    bot = context.bot
-    args = context.args
+async def is_register_admin(chat, user):
+    if isinstance(chat, (types.InputPeerChannel, types.InputChannel)):
+        return isinstance(
+            (
+                await bot(functions.channels.GetParticipantRequest(chat, user))
+            ).participant,
+            (types.ChannelParticipantAdmin, types.ChannelParticipantCreator),
+        )
+    if isinstance(chat, types.InputPeerUser):
+        return True
 
-    message = update.effective_message
+
+async def can_promote_users(message):
+    result = await bot(
+        functions.channels.GetParticipantRequest(
+            channel=message.chat_id,
+            user_id=message.sender_id,
+        )
+    )
+    p = result.participant
+    return isinstance(p, types.ChannelParticipantCreator) or (
+        isinstance(p, types.ChannelParticipantAdmin) and p.admin_rights.ban_users
+    )
+
+
+async def can_ban_users(message):
+    result = await bot(
+        functions.channels.GetParticipantRequest(
+            channel=message.chat_id,
+            user_id=message.sender_id,
+        )
+    )
+    p = result.participant
+    return isinstance(p, types.ChannelParticipantCreator) or (
+        isinstance(p, types.ChannelParticipantAdmin) and p.admin_rights.ban_users
+    )
+
+
+@bot.on(events.NewMessage(pattern="/users$"))
+async def get_users(show):
+    if not show.is_group:
+        return
+    if show.is_group and not await is_register_admin(show.input_chat, show.sender_id):
+        return
+    info = await bot.get_entity(show.chat_id)
+    title = info.title if info.title else "this chat"
+    mentions = "ᴜsᴇʀs ɪɴ {}: \n".format(title)
+    async for user in bot.iter_participants(show.chat_id):
+        if not user.deleted:
+            mentions += f"\n[{user.first_name}](tg://user?id={user.id}) {user.id}"
+        else:
+            mentions += f"\nᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛ {user.id}"
+    file = open("userslist.txt", "w+")
+    file.write(mentions)
+    file.close()
+    await bot.send_file(
+        show.chat_id,
+        "userslist.txt",
+        caption="ᴜsᴇʀs ɪɴ {}".format(title),
+        reply_to=show.id,
+    )
+    os.remove("userslist.txt")
+
+
+@bot_admin
+@user_admin
+def set_sticker(update: Update, context: CallbackContext):
+    msg = update.effective_message
     chat = update.effective_chat
     user = update.effective_user
 
-    user_id = await extract_user(message, context, args)
-    await chat.get_member(user.id)
+    if user_can_changeinfo(chat, user, context.bot.id) is False:
+        return msg.reply_text("ʏᴏᴜ'ʀᴇ ᴍɪssɪɴɢ ʀɪɢʜᴛs ᴛᴏ ᴄʜᴀɴɢᴇ ᴄʜᴀᴛ ɪɴғᴏ!")
 
-    if message.from_user.id == ChatID.ANONYMOUS_ADMIN:
-        await message.reply_text(
-            text="ʏᴏᴜ ᴀʀᴇ ᴀɴ ᴀɴᴏɴʏᴍᴏᴜs ᴀᴅᴍɪɴ.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            text="ᴄʟɪᴄᴋ ᴛᴏ ᴘʀᴏᴠᴇ ᴀᴅᴍɪɴ.",
-                            callback_data=f"admin_=promote={user_id}",
-                        ),
-                    ],
-                ],
-            ),
-        )
+    if msg.reply_to_message:
+        if not msg.reply_to_message.sticker:
+            return msg.reply_text(
+                "ʏᴏᴜ ɴᴇᴇᴅ ᴛᴏ ʀᴇᴘʟʏ ᴛᴏ sᴏᴍᴇ sᴛɪᴄᴋᴇʀ ᴛᴏ sᴇᴛ ᴄʜᴀᴛ sᴛɪᴄᴋᴇʀ sᴇᴛ!"
+            )
+        stkr = msg.reply_to_message.sticker.set_name
+        try:
+            context.bot.set_chat_sticker_set(chat.id, stkr)
+            msg.reply_text(f"sᴜᴄᴄᴇssғᴜʟʟʏ sᴇᴛ ɴᴇᴡ ɢʀᴏᴜᴘ sᴛɪᴄᴋᴇʀs ɪɴ {chat.title}!")
+        except BadRequest as excp:
+            if excp.message == "Participants_too_few":
+                return msg.reply_text(
+                    "sᴏʀʀʏ, ᴅᴜᴇ ᴛᴏ ᴛᴇʟᴇɢʀᴀᴍ ʀᴇsᴛʀɪᴄᴛɪᴏɴs ᴄʜᴀᴛ ɴᴇᴇᴅs ᴛᴏ ʜᴀᴠᴇ ᴍɪɴɪᴍᴜᴍ 100 ᴍᴇᴍʙᴇʀs ʙᴇғᴏʀᴇ ᴛʜᴇʏ ᴄᴀɴ ʜᴀᴠᴇ ɢʀᴏᴜᴘ sᴛɪᴄᴋᴇʀs!"
+                )
+            msg.reply_text(f"ᴇʀʀᴏʀ! {excp.message}.")
+    else:
+        msg.reply_text("ʏᴏᴜ ɴᴇᴇᴅ ᴛᴏ ʀᴇᴘʟʏ ᴛᴏ sᴏᴍᴇ sᴛɪᴄᴋᴇʀ ᴛᴏ sᴇᴛ ᴄʜᴀᴛ sᴛɪᴄᴋᴇʀ sᴇᴛ!")
 
+
+@bot_admin
+@user_admin
+def setchatpic(update: Update, context: CallbackContext):
+    chat = update.effective_chat
+    msg = update.effective_message
+    user = update.effective_user
+
+    if user_can_changeinfo(chat, user, context.bot.id) is False:
+        msg.reply_text("ʏᴏᴜ ᴀʀᴇ ᴍɪssɪɴɢ ʀɪɢʜᴛ ᴛᴏ ᴄʜᴀɴɢᴇ ɢʀᴏᴜᴘ ɪɴғᴏ!")
+        ʀᴇᴛᴜʀɴ
+
+    if msg.reply_to_message:
+        if msg.reply_to_message.photo:
+            pic_id = msg.reply_to_message.photo[-1].file_id
+        elif msg.reply_to_message.document:
+            pic_id = msg.reply_to_message.document.file_id
+        else:
+            msg.reply_text("ʏᴏᴜ ᴄᴀɴ ᴏɴʟʏ sᴇᴛ sᴏᴍᴇ ᴘʜᴏᴛᴏ ᴀs ᴄʜᴀᴛ ᴘɪᴄ!")
+            return
+        dlmsg = msg.reply_text("ᴊᴜsᴛ ᴀ sᴇᴄ......")
+        tpic = context.bot.get_file(pic_id)
+        tpic.download("gpic.png")
+        try:
+            with open("gpic.png", "rb") as chatp:
+                context.bot.set_chat_photo(int(chat.id), photo=chatp)
+                msg.reply_text("sᴜᴄᴄᴇssғᴜʟʟʏ sᴇᴛ ɴᴇᴡ ᴄʜᴀᴛᴘɪᴄ!")
+        except BadRequest as excp:
+            msg.reply_text(f"ᴇʀʀᴏʀ! {excp.message}")
+        finally:
+            dlmsg.delete()
+            if os.path.isfile("gpic.png"):
+                os.remove("gpic.png")
+    else:
+        msg.reply_text("ʀᴇᴘʟʏ ᴛᴏ sᴏᴍᴇ ᴘʜᴏᴛᴏ ᴏʀ ғɪʟᴇ ᴛᴏ sᴇᴛ ɴᴇᴡ ᴄʜᴀᴛ ᴘɪᴄ!")
+
+
+@bot_admin
+@user_admin
+def rmchatpic(update: Update, context: CallbackContext):
+    chat = update.effective_chat
+    msg = update.effective_message
+    user = update.effective_user
+
+    if user_can_changeinfo(chat, user, context.bot.id) is False:
+        msg.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ᴅᴇʟᴇᴛᴇ ɢʀᴏᴜᴘ ᴘʜᴏᴛᴏ")
+        return
+    try:
+        context.bot.delete_chat_photo(int(chat.id))
+        msg.reply_text("sᴜᴄᴄᴇssғᴜʟʟʏ ᴅᴇʟᴇᴛᴇᴅ ᴄʜᴀᴛ's ᴘʀᴏғɪʟᴇ ᴘʜᴏᴛᴏ!")
+    except BadRequest as excp:
+        msg.reply_text(f"ᴇʀʀᴏʀ! {excp.message}.")
         return
 
-    if not user_id:
-        await message.reply_text(
-            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
-        )
+
+@bot_admin
+@user_admin
+def set_desc(update: Update, context: CallbackContext):
+    msg = update.effective_message
+    chat = update.effective_chat
+    user = update.effective_user
+
+    if user_can_changeinfo(chat, user, context.bot.id) is False:
+        return msg.reply_text("ʏᴏᴜ'ʀᴇ ᴍɪssɪɴɢ ʀɪɢʜᴛs ᴛᴏ ᴄʜᴀɴɢᴇ ᴄʜᴀᴛ ɪɴғᴏ!")
+
+    tesc = msg.text.split(None, 1)
+    if len(tesc) >= 2:
+        desc = tesc[1]
+    else:
+        return msg.reply_text("sᴇᴛᴛɪɴɢ ᴇᴍᴘᴛʏ ᴅᴇsᴄʀɪᴘᴛɪᴏɴ ᴡᴏɴ'ᴛ ᴅᴏ ᴀɴʏᴛʜɪɴɢ!")
+    try:
+        if len(desc) > 255:
+            return msg.reply_text("ᴅᴇsᴄʀɪᴘᴛɪᴏɴ ᴍᴜsᴛ ɴᴇᴇᴅs ᴛᴏ ʙᴇ ᴜɴᴅᴇʀ 255 ᴄʜᴀʀᴀᴄᴛᴇʀs!")
+        context.bot.set_chat_description(chat.id, desc)
+        msg.reply_text(f"sᴜᴄᴄᴇssғᴜʟʟʏ ᴜᴘᴅᴀᴛᴇᴅ ᴄʜᴀᴛ ᴅᴇsᴄʀɪᴘᴛɪᴏɴ ɪɴ {chat.title}!")
+    except BadRequest as excp:
+        msg.reply_text(f"ᴇʀʀᴏʀ! {excp.message}.")
+
+
+@bot_admin
+@user_admin
+def setchat_title(update: Update, context: CallbackContext):
+    chat = update.effective_chat
+    msg = update.effective_message
+    user = update.effective_user
+    args = context.args
+
+    if user_can_changeinfo(chat, user, context.bot.id) is False:
+        msg.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ᴄʜᴀɴɢᴇ ᴄʜᴀᴛ ɪɴғᴏ!")
+        ʀᴇᴛᴜʀɴ
+
+    title = " ".join(args)
+    if not title:
+        msg.reply_text("ᴇɴᴛᴇʀ sᴏᴍᴇ ᴛᴇxᴛ ᴛᴏ sᴇᴛ ɴᴇᴡ ᴛɪᴛʟᴇ ɪɴ ʏᴏᴜʀ ᴄʜᴀᴛ!")
         return
 
     try:
-        user_member = await chat.get_member(user_id)
-    except:
+        context.bot.set_chat_title(int(chat.id), str(title))
+        msg.reply_text(
+            f"sᴜᴄᴄᴇssғᴜʟʟʏ sᴇᴛ <b>{title}</b> ᴀs ɴᴇᴡ ᴄʜᴀᴛ ᴛɪᴛʟᴇ!",
+            parse_mode=ParseMode.HTML,
+        )
+    except BadRequest as excp:
+        msg.reply_text(f"ᴇʀʀᴏʀ! {excp.message}.")
         return
 
-    if (
-        user_member.status == ChatMemberStatus.ADMINISTRATOR
-        or user_member.status == ChatMemberStatus.OWNER
-    ):
-        await message.reply_text(
-            "ʜᴏᴡ ᴀᴍ ɪ ᴍᴇᴀɴᴛ ᴛᴏ ᴘʀᴏᴍᴏᴛᴇ sᴏᴍᴇᴏɴᴇ ᴛʜᴀᴛ's ᴀʟʀᴇᴀᴅʏ ᴀɴ ᴀᴅᴍɪɴ?"
-        )
-        return
+
+@bot_admin
+@can_promote
+@user_admin
+@loggable
+@typing_action
+def promote(update: Update, context: CallbackContext) -> Optional[str]:
+    chat_id = update.effective_chat.id
+    message = update.effective_message
+    chat = update.effective_chat
+    user = update.effective_user
+    bot, args = context.bot, context.args
+
+    if user_can_promote(chat, user, bot.id) is False:
+        message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ᴘʀᴏᴍᴏᴛᴇ sᴏᴍᴇᴏɴᴇ!")
+        return ""
+
+    user_id = extract_user(message, args)
+    if not user_id:
+        message.reply_text("ᴍᴇɴᴛɪᴏɴ ᴏɴᴇ.... 🤷🏻‍♂.")
+        return ""
+
+    user_member = chat.get_member(user_id)
+    if user_member.status in ["administrator", "creator"]:
+        message.reply_text("ᴛʜɪs ᴘᴇʀsᴏɴ ɪs ᴀʟʀᴇᴀᴅʏ ᴀɴ ᴀᴅᴍɪɴ...!")
+        return ""
 
     if user_id == bot.id:
-        await message.reply_text(
-            "I ᴄᴀɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇ ᴍʏsᴇʟғ! ɢᴇᴛ ᴀɴ ᴀᴅᴍɪɴ ᴛᴏ ᴅᴏ ɪᴛ ғᴏʀ ᴍᴇ."
-        )
-        return
+        message.reply_text("I ʜᴏᴘᴇ, ɪғ ɪ ᴄᴏᴜʟᴅ ᴘʀᴏᴍᴏᴛᴇ ᴍʏsᴇʟғ!")
+        return ""
 
     # set same perms as bot - bot can't assign higher perms than itself!
-    bot_member = await chat.get_member(bot.id)
+    bot_member = chat.get_member(bot.id)
 
-    if isinstance(bot_member, ChatMemberAdministrator):
-        try:
-            await bot.promoteChatMember(
-                chat.id,
-                user_id,
-                can_change_info=bot_member.can_change_info,
-                can_post_messages=bot_member.can_post_messages,
-                can_edit_messages=bot_member.can_edit_messages,
-                can_delete_messages=bot_member.can_delete_messages,
-                can_invite_users=bot_member.can_invite_users,
-                # can_promote_members=bot_member.can_promote_members,
-                can_restrict_members=bot_member.can_restrict_members,
-                can_pin_messages=bot_member.can_pin_messages,
-                can_manage_chat=bot_member.can_manage_chat,
-                can_manage_video_chats=bot_member.can_manage_video_chats,
-                can_manage_topics=bot_member.can_manage_topics,
+    bot.promoteChatMember(
+        chat_id,
+        user_id,
+        can_change_info=bot_member.can_change_info,
+        can_post_messages=bot_member.can_post_messages,
+        can_edit_messages=bot_member.can_edit_messages,
+        can_delete_messages=bot_member.can_delete_messages,
+        can_invite_users=bot_member.can_invite_users,
+        can_restrict_members=bot_member.can_restrict_members,
+        can_pin_messages=bot_member.can_pin_messages,
+    )
+
+    title = "admin"
+    if " " in message.text:
+        title = message.text.split(" ", 1)[1]
+        if len(title) > 16:
+            message.reply_text(
+                "ᴛʜᴇ ᴛɪᴛʟᴇ ʟᴇɴɢᴛʜ ɪs ʟᴏɴɢᴇʀ ᴛʜᴀɴ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs.\nᴛʀᴜɴᴄᴀᴛɪɴɢ it ᴛᴏ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs."
             )
-        except BadRequest as err:
-            if err.message == "User_not_mutual_contact":
-                await message.reply_text(
-                    "I ᴄᴀɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇ sᴏᴍᴇᴏɴᴇ ᴡʜᴏ ɪsɴ'ᴛ ɪɴ ᴛʜᴇ ɢʀᴏᴜᴘ."
-                )
-            else:
-                await message.reply_text("ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ᴘʀᴏᴍᴏᴛɪɴɢ.")
-            return
 
-    await bot.sendMessage(
-        chat.id,
-        f"sᴜᴄᴄᴇssғᴜʟʟʏ ᴘʀᴏᴍᴏᴛᴇᴅ <b>{user_member.user.first_name or user_id}</b>!",
+        try:
+            bot.setChatAdministratorCustomTitle(chat.id, user_id, title)
+
+        except BadRequest:
+            message.reply_text(
+                "I ᴄᴀɴ'ᴛ sᴇᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ ғᴏʀ ᴀᴅᴍɪɴs ᴛʜᴀᴛ I ᴅɪᴅɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇ!"
+            )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    text="⏬ ᴅᴇᴍᴏᴛᴇ",
+                    callback_data="demote_({})".format(user_member.user.id),
+                ),
+                InlineKeyboardButton(text="ᴄʟᴏsᴇ ⛔", callback_data="close2"),
+            ]
+        ]
+    )
+    message.reply_text(
+        f"♔ {chat.title} ᴇᴠᴇɴᴛ!\n"
+        f"• ᴀ ɴᴇᴡ ᴀᴅᴍɪɴ ʜᴀs ʙᴇᴇɴ ᴀᴘᴘᴏɪɴᴛᴇᴅ!\n"
+        f"• ʟᴇᴛ's ᴀʟʟ ᴡᴇʟᴄᴏᴍᴇ {mention_html(user_member.user.id, user_member.user.first_name)}",
+        reply_markup=keyboard,
         parse_mode=ParseMode.HTML,
-        message_thread_id=message.message_thread_id if chat.is_forum else None,
+    )
+    # ʀᴇғʀᴇsʜ ᴀᴅᴍɪɴ ᴄᴀᴄʜᴇ
+    try:
+        ADMIN_CACHE.pop(update.effective_chat.id)
+    except KeyError:
+        pass
+    return (
+        "<b>{}:</b>"
+        "\n#ᴘʀᴏᴍᴏᴛᴇᴅ"
+        "\n<b>ᴀᴅᴍɪɴ:</b> {}"
+        "\n<b>ᴜsᴇʀ:</b> {}".format(
+            html.escape(chat.title),
+            mention_html(user.id, user.first_name),
+            mention_html(user_member.user.id, user_member.user.first_name),
+        )
+    )
+
+
+close_keyboard = InlineKeyboardMarkup(
+    [[InlineKeyboardButton("🔄 ᴄᴀᴄʜᴇ", callback_data="close2")]]
+)
+
+
+@bot_admin
+@can_promote
+@user_admin
+@loggable
+@typing_action
+def fullpromote(update, context):
+    message = update.effective_message
+    chat = update.effective_chat
+    user = update.effective_user
+    bot, args = context.bot, context.args
+
+    if user_can_promote(chat, user, bot.id) is False:
+        message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ᴘʀᴏᴍᴏᴛᴇ sᴏᴍᴇᴏɴᴇ!")
+        return ""
+
+    user_id = extract_user(message, args)
+    if not user_id:
+        message.reply_text("ᴍᴇɴᴛɪᴏɴ ᴏɴᴇ.... 🤷🏻‍♂.")
+        return ""
+
+    user_member = chat.get_member(user_id)
+    if user_member.status in ["administrator", "creator"]:
+        message.reply_text("ᴛʜɪs ᴘᴇʀsᴏɴ ɪs ᴀʟʀᴇᴀᴅʏ ᴀɴ ᴀᴅᴍɪɴ...!")
+        return ""
+
+    if user_id == bot.id:
+        message.reply_text("I ʜᴏᴘᴇ, ɪғ ɪ ᴄᴏᴜʟᴅ ᴘʀᴏᴍᴏᴛᴇ ᴍʏsᴇʟғ!")
+        return ""
+
+    # set same perms as bot - bot can't assign higher perms than itself!
+    bot_member = chat.get_member(bot.id)
+
+    bot.promoteChatMember(
+        chat.id,
+        user_id,
+        can_change_info=bot_member.can_change_info,
+        can_post_messages=bot_member.can_post_messages,
+        can_edit_messages=bot_member.can_edit_messages,
+        can_delete_messages=bot_member.can_delete_messages,
+        can_invite_users=bot_member.can_invite_users,
+        can_promote_members=bot_member.can_promote_members,
+        can_restrict_members=bot_member.can_restrict_members,
+        can_pin_messages=bot_member.can_pin_messages,
+        can_manage_voice_chats=bot_member.can_manage_voice_chats,
+    )
+
+    title = "admin"
+    if " " in message.text:
+        title = message.text.split(" ", 1)[1]
+        if len(title) > 16:
+            message.reply_text(
+                "ᴛʜᴇ ᴛɪᴛʟᴇ ʟᴇɴɢᴛʜ ɪs ʟᴏɴɢᴇʀ ᴛʜᴀɴ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs.\nᴛʀᴜɴᴄᴀᴛɪɴɢ ɪᴛ ᴛᴏ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs."
+            )
+
+        try:
+            bot.setChatAdministratorCustomTitle(chat.id, user_id, title)
+
+        except BadRequest:
+            message.reply_text(
+                "I ᴄᴀɴ'ᴛ sᴇᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ ғᴏʀ ᴀᴅᴍɪɴs ᴛʜᴀᴛ I ᴅɪᴅɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇ!"
+            )
+
+    keyboard = InlineKeyboardMarkup(
+        [
+            [
+                InlineKeyboardButton(
+                    text="⏬ ᴅᴇᴍᴏᴛᴇ",
+                    callback_data="demote_({})".format(user_member.user.id),
+                ),
+                InlineKeyboardButton(text="🔄 ᴄʟᴏsᴇ", callback_data="close2"),
+            ]
+        ]
+    )
+    message.reply_text(
+        f"♔ {chat.title} ᴇᴠᴇɴᴛ!\n"
+        f"• ᴀ ɴᴇᴡ ᴀᴅᴍɪɴ ʜᴀs ʙᴇᴇɴ ᴀᴘᴘᴏɪɴᴛᴇᴅ ᴀs ғᴜʟʟʏ ᴘʀᴏᴍᴏᴛᴇᴅ!\n"
+        f"• ʟᴇᴛ's ᴀʟʟ ᴡᴇʟᴄᴏᴍᴇ {mention_html(user_member.user.id, user_member.user.first_name)}",
+        reply_markup=keyboard,
+        parse_mode=ParseMode.HTML,
     )
 
     log_message = (
         f"<b>{html.escape(chat.title)}:</b>\n"
-        f"#𝐏𝐑𝐎𝐌𝐎𝐓𝐄𝐃\n"
+        f"#ғᴜʟʟᴘʀᴏᴍᴏᴛᴇᴅ\n"
         f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(user.id, user.first_name)}\n"
         f"<b>ᴜsᴇʀ:</b> {mention_html(user_member.user.id, user_member.user.first_name)}"
+    )
+
+
+close_keyboard = InlineKeyboardMarkup(
+    [[InlineKeyboardButton("🔄 ᴄᴀᴄʜᴇ", callback_data="close2")]]
+)
+
+
+@bot_admin
+@can_promote
+@user_admin
+@loggable
+@typing_action
+def demote(update: Update, context: CallbackContext) -> Optional[str]:
+    chat = update.effective_chat
+    message = update.effective_message
+    user = update.effective_user
+    bot, args = context.bot, context.args
+
+    if user_can_promote(chat, user, bot.id) is False:
+        message.reply_text("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴇɴᴏᴜɢʜ ʀɪɢʜᴛs ᴛᴏ ᴅᴇᴍᴏᴛᴇ sᴏᴍᴇᴏɴᴇ!")
+        return ""
+
+    user_id = extract_user(message, args)
+    if not user_id:
+        message.reply_text(
+            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ɪᴅ sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ.."
+        )
+        return ""
+
+    user_member = chat.get_member(user_id)
+    if user_member.status == "creator":
+        message.reply_text("ᴛʜɪs ᴘᴇʀsᴏɴ CREATED ᴛʜᴇ ᴄʜᴀᴛ, ʜᴏᴡ ᴡᴏᴜʟᴅ I ᴅᴇᴍᴏᴛᴇ ᴛʜᴇᴍ?")
+        return ""
+
+    if user_member.status != "administrator":
+        message.reply_text(
+            "ʜᴏᴡ I'ᴍ sᴜᴘᴘᴏsᴇᴅ ᴛᴏ ᴅᴇᴍᴏᴛᴇ sᴏᴍᴇᴏɴᴇ ᴡʜᴏ ɪs ɴᴏᴛ ᴇᴠᴇɴ ᴀɴ ᴀᴅᴍɪɴ!"
+        )
+        return ""
+
+    if user_id == bot.id:
+        message.reply_text("ʏᴇᴀʜʜʜ... I'ᴍ ɴᴏᴛ ɢᴏɴɴᴀ ᴅᴇᴍᴏᴛᴇ ᴍʏsᴇʟғ!")
+        return ""
+
+    try:
+        bot.promoteChatMember(
+            int(chat.id),
+            int(user_id),
+            can_change_info=False,
+            can_post_messages=False,
+            can_edit_messages=False,
+            can_delete_messages=False,
+            can_invite_users=False,
+            can_restrict_members=False,
+            can_pin_messages=False,
+            can_manage_voice_chats=False,
+        )
+        message.reply_text(
+            f"sᴜᴄᴄᴇssғᴜʟʟʏ ᴅᴇᴍᴏᴛᴇᴅ <b>{user_member.user.first_name or user_id}</b>!",
+            parse_mode=ParseMode.HTML,
+        )
+        return (
+            "<b>{}:</b>"
+            "\n#ᴅᴇᴍᴏᴛᴇᴅ"
+            "\n<b>ᴀᴅᴍɪɴ:</b> {}"
+            "\n<b>ᴜsᴇʀ:</b> {}".format(
+                html.escape(chat.title),
+                mention_html(user.id, user.first_name),
+                mention_html(user_member.user.id, user_member.user.first_name),
+            )
+        )
+
+    except BadRequest:
+        message.reply_text(
+            "ғᴀɪʟᴇᴅ ᴛᴏ ᴅᴇᴍᴏᴛᴇ. ɪ ᴍɪɢʜᴛ ɴᴏᴛ ʙᴇ ᴀᴅᴍɪɴ, ᴏʀ ᴛʜᴇ ᴀᴅᴍɪɴ sᴛᴀᴛᴜs ᴡᴀs ᴀᴘᴘᴏɪɴᴛᴇᴅ ʙʏ ᴀɴᴏᴛʜᴇʀ "
+            "ᴜsᴇʀ, sᴏ I ᴄᴀɴ'ᴛ act upon them!"
+        )
+        return ""
+
+
+@user_admin
+def refresh_admin(update, _):
+    try:
+        ADMIN_CACHE.pop(update.effective_chat.id)
+    except KeyError:
+        pass
+
+    update.effective_message.reply_text("ᴀᴅᴍɪɴs ᴄᴀᴄʜᴇ ʀᴇғʀᴇsʜᴇᴅ!")
+
+
+@connection_status
+@bot_admin
+@can_promote
+@user_admin
+def set_title(update: Update, context: CallbackContext):
+    bot = context.bot
+    args = context.args
+
+    chat = update.effective_chat
+    message = update.effective_message
+
+    user_id, title = extract_user_and_text(message, args)
+    try:
+        user_member = chat.get_member(user_id)
+    except:
+        return
+
+    if not user_id:
+        message.reply_text(
+            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ɪᴅ sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
+        )
+        return
+
+    if user_member.status == "creator":
+        message.reply_text(
+            "ᴛʜɪs ᴘᴇʀsᴏɴ CREATED ᴛʜᴇ ᴄʜᴀᴛ, ʜᴏᴡ ᴄᴀɴ ɪ sᴇᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ ғᴏʀ ʜɪᴍ?",
+        )
+        return
+
+    if user_member.status != "administrator":
+        message.reply_text(
+            "ᴄᴀɴ'ᴛ sᴇᴛ title for ɴᴏɴ-ᴀᴅᴍɪɴs!\nᴘʀᴏᴍᴏᴛᴇ ᴛʜᴇᴍ ғɪʀsᴛ ᴛᴏ sᴇᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ!",
+        )
+        return
+
+    if user_id == bot.id:
+        message.reply_text(
+            "I ᴄᴀɴ'ᴛ sᴇᴛ ᴍʏ ᴏᴡɴ ᴛɪᴛʟᴇ ᴍʏsᴇʟғ! ɢᴇᴛ ᴛʜᴇ ᴏɴᴇ ᴡʜᴏ ᴍᴀᴅᴇ ᴍᴇ ᴀᴅᴍɪɴ ᴛᴏ ᴅᴏ ɪᴛ ғᴏʀ ᴍᴇ.",
+        )
+        return
+
+    if not title:
+        message.reply_text("sᴇᴛᴛɪɴɢ ʙʟᴀɴᴋ ᴛɪᴛʟᴇ ᴅᴏᴇsɴ'ᴛ ᴅᴏ ᴀɴʏᴛʜɪɴɢ!")
+        return
+
+    if len(title) > 16:
+        message.reply_text(
+            "ᴛʜᴇ ᴛɪᴛʟᴇ ʟᴇɴɢᴛʜ ɪs ʟᴏɴɢᴇʀ ᴛʜᴀɴ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs.\nᴛʀᴜɴᴄᴀᴛɪɴɢ it ᴛᴏ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs.",
+        )
+
+    try:
+        bot.setChatAdministratorCustomTitle(chat.id, user_id, title)
+    except BadRequest:
+        message.reply_text(
+            "ᴇɪᴛʜᴇʀ ᴛʜᴇʏ ᴀʀᴇɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇᴅ ʙʏ ᴍᴇ ᴏʀ ʏᴏᴜ sᴇᴛ ᴀ ᴛɪᴛʟᴇ ᴛᴇxᴛ ᴛʜᴀᴛ ɪs ɪᴍᴘᴏssɪʙʟᴇ ᴛᴏ sᴇᴛ."
+        )
+        return
+
+    bot.sendMessage(
+        chat.id,
+        f"sᴜᴄᴇssғᴜʟʟʏ sᴇᴛ ᴛɪᴛʟᴇ ғᴏʀ <code>{user_member.user.first_name or user_id}</code> "
+        f"ᴛᴏ <code>{html.escape(title[:16])}</code>!",
+        parse_mode=ParseMode.HTML,
+    )
+
+
+@bot_admin
+@can_pin
+@user_admin
+@loggable
+def pin(update: Update, context: CallbackContext) -> str:
+    bot, args = context.bot, context.args
+    user = update.effective_user
+    chat = update.effective_chat
+    msg = update.effective_message
+    msg_id = msg.reply_to_message.message_id if msg.reply_to_message else msg.message_id
+
+    if msg.chat.username:
+        # If chat has a username, use this format
+        link_chat_id = msg.chat.username
+        message_link = f"https://t.me/{link_chat_id}/{msg_id}"
+    elif (str(msg.chat.id)).startswith("-100"):
+        # If chat does not have a username, use this
+        link_chat_id = (str(msg.chat.id)).replace("-100", "")
+        message_link = f"https://t.me/c/{link_chat_id}/{msg_id}"
+
+    is_group = chat.type not in ("private", "channel")
+    prev_message = update.effective_message.reply_to_message
+
+    if prev_message is None:
+        msg.reply_text("ʀᴇᴘʟʏ ᴀ ᴍᴇssᴀɢᴇ ᴛᴏ ᴘɪɴ ɪᴛ!")
+        return
+
+    is_silent = True
+    if len(args) >= 1:
+        is_silent = (
+            args[0].lower() != "notify"
+            or args[0].lower() == "loud"
+            or args[0].lower() == "violent"
+        )
+
+    if prev_message and is_group:
+        try:
+            bot.pinChatMessage(
+                chat.id, prev_message.message_id, disable_notification=is_silent
+            )
+            msg.reply_text(
+                "sᴜᴄᴄᴇss! ᴘɪɴɴᴇᴅ ᴛʜɪs ᴍᴇssᴀɢᴇ ᴏɴ ᴛʜɪs ɢʀᴏᴜᴘ",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        [
+                            InlineKeyboardButton(
+                                text="📝 ᴠɪᴇᴡ ᴍᴇssᴀɢᴇs", url=f"{message_link}"
+                            ),
+                            InlineKeyboardButton(
+                                text="❌ ᴅᴇʟᴇᴛᴇ", callback_data="close2"
+                            ),
+                        ]
+                    ]
+                ),
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+        except BadRequest as excp:
+            if excp.message != "Chat_not_modified":
+                raise
+
+        log_message = (
+            f"<b>{html.escape(chat.title)}:</b>\n"
+            f"ᴘɪɴɴᴇᴅ\n"
+            f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(user.id, html.escape(user.first_name))}"
+        )
+
+        return log_message
+
+
+close_keyboard = InlineKeyboardMarkup(
+    [[InlineKeyboardButton("❌ ᴅᴇʟᴇᴛᴇ", callback_data="close2")]]
+)
+
+
+@bot_admin
+@can_pin
+@user_admin
+@loggable
+def unpin(update: Update, context: CallbackContext):
+    chat = update.effective_chat
+    user = update.effective_user
+    msg = update.effective_message
+    msg_id = msg.reply_to_message.message_id if msg.reply_to_message else msg.message_id
+    unpinner = chat.get_member(user.id)
+
+    if (
+        not (unpinner.can_pin_messages or unpinner.status == "creator")
+        and user.id not in DRAGONS
+    ):
+        message.reply_text("ʏᴏᴜ ᴅᴏɴ ʜᴀᴠᴇ ᴛʜᴇ ɴᴇᴄᴇssᴀʀʏ ʀɪɢʜᴛs ᴛᴏ ᴅᴏ ᴛʜᴀᴛ!")
+        return
+
+    if msg.chat.username:
+        # If chat has a username, use this format
+        link_chat_id = msg.chat.username
+        message_link = f"https://t.me/{link_chat_id}/{msg_id}"
+    elif (str(msg.chat.id)).startswith("-100"):
+        # If chat does not have a username, use this
+        link_chat_id = (str(msg.chat.id)).replace("-100", "")
+        message_link = f"https://t.me/c/{link_chat_id}/{msg_id}"
+
+    is_group = chat.type not in ("private", "channel")
+    prev_message = update.effective_message.reply_to_message
+
+    if prev_message and is_group:
+        try:
+            context.bot.unpinChatMessage(chat.id, prev_message.message_id)
+            msg.reply_text(
+                f"ᴜɴᴘɪɴɴᴇᴅ <a href='{message_link}'>this message</a>.",
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+        except BadRequest as excp:
+            if excp.message != "Chat_not_modified":
+                raise
+
+    if not prev_message and is_group:
+        try:
+            context.bot.unpinChatMessage(chat.id)
+            msg.reply_text("🔽 ᴜɴᴘɪɴɴᴇᴅ ᴛʜᴇ ʟᴀsᴛ ᴍᴇssᴀɢᴇ ᴏɴ ᴛʜɪs ɢʀᴏᴜᴘ.")
+        except BadRequest as excp:
+            if excp.message == "ᴍᴇssᴀɢᴇ ᴛᴏ ᴜɴᴘɪɴ ɴᴏᴛ ғᴏᴜɴᴅ":
+                msg.reply_text(
+                    "I ᴄᴀɴ'ᴛ sᴇᴇ ᴘɪɴɴᴇᴅ ᴍᴇssᴀɢᴇ, ᴍᴀʏʙᴇ ᴀʟʀᴇᴀᴅʏ ᴜɴᴘɪɴᴇᴅ, ᴏʀ ᴘɪɴ ᴍᴇssᴀɢᴇ ᴛᴏ ᴏʟᴅ 🙂"
+                )
+            else:
+                raise
+
+    log_message = (
+        f"<b>{html.escape(chat.title)}:</b>\n"
+        f"ᴍᴇssᴀɢᴇ-ᴜɴᴘɪɴɴᴇᴅ-sᴜᴄᴄᴇssғᴜʟʟʏ\n"
+        f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(user.id, html.escape(user.first_name))}"
     )
 
     return log_message
 
 
-@connection_status
-@loggable
-@check_admin(permission="can_promote_members", is_both=True)
-async def demote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
+@bot_admin
+def pinned(update: Update, context: CallbackContext) -> str:
     bot = context.bot
-    args = context.args
+    msg = update.effective_message
+    msg_id = (
+        update.effective_message.reply_to_message.message_id
+        if update.effective_message.reply_to_message
+        else update.effective_message.message_id
+    )
 
-    chat = update.effective_chat
-    message = update.effective_message
-    user = update.effective_user
+    chat = bot.getChat(chat_id=msg.chat.id)
+    if chat.pinned_message:
+        pinned_id = chat.pinned_message.message_id
+        if msg.chat.username:
+            link_chat_id = msg.chat.username
+            message_link = f"https://t.me/{link_chat_id}/{pinned_id}"
+        elif (str(msg.chat.id)).startswith("-100"):
+            link_chat_id = (str(msg.chat.id)).replace("-100", "")
+            message_link = f"https://t.me/c/{link_chat_id}/{pinned_id}"
 
-    user_id = await extract_user(message, context, args)
-    await chat.get_member(user.id)
-
-    if message.from_user.id == ChatID.ANONYMOUS_ADMIN:
-        await message.reply_text(
-            text="ʏᴏᴜ ᴀʀᴇ ᴀɴ ᴀɴᴏɴʏᴍᴏᴜs ᴀᴅᴍɪɴ.",
+        msg.reply_text(
+            f"📌 ᴘɪɴɴᴇᴅ ᴛʜᴇ ᴍᴇssᴀɢᴇ ᴏɴ {html.escape(chat.title)}.",
+            reply_to_message_id=msg_id,
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
             reply_markup=InlineKeyboardMarkup(
                 [
                     [
                         InlineKeyboardButton(
-                            text="ᴄʟɪᴄᴋ ᴛᴏ ᴘʀᴏᴠᴇ ᴀᴅᴍɪɴ.",
-                            callback_data=f"admin_=demote={user_id}",
-                        ),
-                    ],
-                ],
+                            text="ᴘɪɴɴᴇᴅ ᴍᴇssᴀɢᴇs",
+                            url=f"https://t.me/{link_chat_id}/{pinned_id}",
+                        )
+                    ]
+                ]
             ),
         )
 
-        return
-
-    if not user_id:
-        await message.reply_text(
-            "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ɪᴅ sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
+    else:
+        msg.reply_text(
+            f"ᴛʜᴇʀᴇ ɪs ɴᴏ ᴘɪɴɴᴇᴅ ᴍᴇssᴀɢᴇ ᴏɴ <b>{html.escape(chat.title)}!</b>",
+            parse_mode=ParseMode.HTML,
         )
-        return
 
-    try:
-        user_member = await chat.get_member(user_id)
-    except:
-        return
 
-    if user_member.status == ChatMemberStatus.OWNER:
-        await message.reply_text(
-            "ᴛʜɪs ᴘᴇʀsᴏɴ CREATED ᴛʜᴇ ᴄʜᴀᴛ, ʜᴏᴡ ᴡᴏᴜʟᴅ ɪ ᴅᴇᴍᴏᴛᴇ ᴛʜᴇᴍ?"
+@bot_admin
+@user_admin
+@typing_action
+def invite(update, context):
+    bot = context.bot
+    user = update.effective_user
+    msg = update.effective_message
+    chat = update.effective_chat
+
+    conn = connected(bot, update, chat, user.id, need_admin=True)
+    if conn:
+        chat = dispatcher.bot.getChat(conn)
+    else:
+        if msg.chat.type == "private":
+            msg.reply_text("ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ɪs ᴍᴇᴀɴᴛ ᴛᴏ ᴜsᴇ ɪɴ ᴄʜᴀᴛ ɴᴏᴛ ɪɴ PM")
+            return ""
+        chat = update.effective_chat
+
+    if chat.username:
+        msg.reply_text(chat.username)
+    elif chat.type in [chat.SUPERGROUP, chat.CHANNEL]:
+        bot_member = chat.get_member(bot.id)
+        if bot_member.can_invite_users:
+            invitelink = context.bot.exportChatInviteLink(chat.id)
+            msg.reply_text(invitelink)
+        else:
+            msg.reply_text(
+                "I ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴀᴄᴄᴇss ᴛᴏ ᴛʜᴇ ɪɴᴠɪᴛᴇ ʟɪɴᴋ, ᴛʀʏ ᴄʜᴀɴɢɪɴɢ ᴍʏ ᴘᴇʀᴍɪssɪᴏɴs!"
+            )
+    else:
+        msg.reply_text(
+            "I ᴄᴀɴ ᴏɴʟʏ ɢɪᴠᴇ ʏᴏᴜ ɪɴᴠɪᴛᴇ ʟɪɴᴋs ғᴏʀ sᴜᴘᴇʀɢʀᴏᴜᴘs ᴀɴᴅ ᴄʜᴀɴɴᴇʟs, sᴏʀʀʏ!"
         )
-        return
 
-    if not user_member.status == ChatMemberStatus.ADMINISTRATOR:
-        await message.reply_text("ᴄᴀɴ'ᴛ ᴅᴇᴍᴏᴛᴇ ᴡʜᴀᴛ ᴡᴀsɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇᴅ!")
-        return
 
-    if user_id == bot.id:
-        await message.reply_text("I ᴄᴀɴ'ᴛ ᴅᴇᴍᴏᴛᴇ ᴍʏsᴇʟғ !.")
-        return
+"""        
+@Abishnoi.on_message(filters.command(["staff", "admins", "adminlist"]) & filters.group)
+    uname = f"ᴀᴅᴍɪɴs ɪɴ {message.chat.title} :\n\n"
+    async for gey in app.iter_chat_members(message.chat.id, filter="administrators"):
+        try:
+            uname += f"@{(await app.get_users(int(gey.user.id))).username}\n"
+        except:
+            uname += ""
+    await message.reply_text(uname)
+"""
 
+
+@Abishnoi.on_message(filters.command(["adminlist", "staff", "admins"]))
+async def admins(client, message):
     try:
-        await bot.promote_chat_member(
+        adminList = []
+        ownerList = []
+        async for admin in Abishnoi.get_chat_members(
+            message.chat.id, filter=enums.ChatMembersFilter.ADMINISTRATORS
+        ):
+            if admin.privileges.is_anonymous == False:
+                if admin.user.is_bot == True:
+                    pass
+                elif admin.status == ChatMemberStatus.OWNER:
+                    ownerList.append(admin.user)
+                else:
+                    adminList.append(admin.user)
+            else:
+                pass
+        lenAdminList = len(ownerList) + len(adminList)
+        text2 = f"**ɢʀᴏᴜᴘ sᴛᴀғғ - {message.chat.title}**\n\n"
+        try:
+            owner = ownerList[0]
+            if owner.username == None:
+                text2 += f"👑 ᴏᴡɴᴇʀ\n└ {owner.mention}\n\n👮🏻 ᴀᴅᴍɪɴs\n"
+            else:
+                text2 += f"👑 ᴏᴡɴᴇʀ\n└ @{owner.username}\n\n👮🏻 ᴀᴅᴍɪɴs\n"
+        except:
+            text2 += f"👑 ᴏᴡɴᴇʀ\n└ <i>Hidden</i>\n\n👮🏻 ᴀᴅᴍɪɴs\n"
+        if len(adminList) == 0:
+            text2 += "└ <i>ᴀᴅᴍɪɴs ᴀʀᴇ ʜɪᴅᴅᴇɴ</i>"
+            await Abishnoi.send_message(message.chat.id, text2)
+        else:
+            while len(adminList) > 1:
+                admin = adminList.pop(0)
+                if admin.username == None:
+                    text2 += f"├ {admin.mention}\n"
+                else:
+                    text2 += f"├ @{admin.username}\n"
+            else:
+                admin = adminList.pop(0)
+                if admin.username == None:
+                    text2 += f"└ {admin.mention}\n\n"
+                else:
+                    text2 += f"└ @{admin.username}\n\n"
+            text2 += f"✅ | **ᴛᴏᴛᴀʟ ɴᴜᴍʙᴇʀ ᴏғ ᴀᴅᴍɪɴs**: {lenAdminList}\n❌ | ʙᴏᴛs ᴀɴᴅ ᴀɴᴏɴʏᴍᴏᴜs ᴀᴅᴍɪɴs ᴡᴇʀᴇ ʀᴇᴊᴇᴄᴛᴇᴅ."
+            await Abishnoi.send_message(message.chat.id, text2)
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+
+
+@Abishnoi.on_message(filters.command("bots"))
+async def bots(client, message):
+    try:
+        botList = []
+        async for bot in Abishnoi.get_chat_members(
+            message.chat.id, filter=enums.ChatMembersFilter.BOTS
+        ):
+            botList.append(bot.user)
+        lenBotList = len(botList)
+        text3 = f"**ʙᴏᴛ ʟɪsᴛ - {message.chat.title}**\n\n🤖 Bots\n"
+        while len(botList) > 1:
+            bot = botList.pop(0)
+            text3 += f"├ @{bot.username}\n"
+        else:
+            bot = botList.pop(0)
+            text3 += f"└ @{bot.username}\n\n"
+            text3 += f"✅ | **ᴛᴏᴛᴀʟ ɴᴜᴍʙᴇʀ ᴏғ ʙᴏᴛs**: {lenBotList}"
+            await Abishnoi.send_message(message.chat.id, text3)
+    except FloodWait as e:
+        await asyncio.sleep(e.value)
+
+
+@bot_admin
+@can_promote
+@user_admin
+@loggable
+def button(update: Update, context: CallbackContext) -> str:
+    query: Optional[CallbackQuery] = update.callback_query
+    user: Optional[User] = update.effective_user
+    bot: Optional[Bot] = context.bot
+    match = re.match(r"demote_\((.+?)\)", query.data)
+    if match:
+        user_id = match.group(1)
+        chat: Optional[Chat] = update.effective_chat
+        member = chat.get_member(user_id)
+        bot_member = chat.get_member(bot.id)
+        bot_permissions = promoteChatMember(
+            chat.id,
+            user_id,
+            can_change_info=bot_member.can_change_info,
+            can_post_messages=bot_member.can_post_messages,
+            can_edit_messages=bot_member.can_edit_messages,
+            can_delete_messages=bot_member.can_delete_messages,
+            can_invite_users=bot_member.can_invite_users,
+            can_promote_members=bot_member.can_promote_members,
+            can_restrict_members=bot_member.can_restrict_members,
+            can_pin_messages=bot_member.can_pin_messages,
+            can_manage_voice_chats=bot_member.can_manage_voice_chats,
+        )
+        demoted = bot.promoteChatMember(
             chat.id,
             user_id,
             can_change_info=False,
@@ -195,826 +943,118 @@ async def demote(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
             can_restrict_members=False,
             can_pin_messages=False,
             can_promote_members=False,
-            can_manage_chat=False,
-            can_manage_video_chats=False,
-            can_manage_topics=False,
+            can_manage_voice_chats=False,
         )
-
-        await bot.sendMessage(
-            chat.id,
-            f"sᴜᴄᴇssғᴜʟʟʏ ᴅᴇᴍᴏᴛᴇᴅ <b>{user_member.user.first_name or user_id}</b>!",
-            parse_mode=ParseMode.HTML,
-            message_thread_id=message.message_thread_id if chat.is_forum else None,
-        )
-
-        log_message = (
-            f"<b>{html.escape(chat.title)}:</b>\n"
-            f"#𝐃𝐄𝐌𝐎𝐓𝐄𝐃\n"
-            f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(user.id, user.first_name)}\n"
-            f"<b>ᴜsᴇʀ:</b> {mention_html(user_member.user.id, user_member.user.first_name)}"
-        )
-
-        return log_message
-    except BadRequest:
-        await message.reply_text(
-            "ᴄᴏᴜʟᴅ ɴᴏᴛ ᴅᴇᴍᴏᴛᴇ. I ᴍɪɢʜᴛ ɴᴏᴛ ʙᴇ ᴀᴅᴍɪɴ, ᴏʀ ᴛʜᴇ ᴀᴅᴍɪɴ sᴛᴀᴛᴜs ᴡᴀs ᴀᴘᴘᴏɪɴᴛᴇᴅ ʙʏ ᴀɴᴏᴛʜᴇʀ"
-            " ᴜsᴇʀ, sᴏ I ᴄᴀɴ'ᴛ ᴀᴄᴛ ᴜᴘᴏɴ ᴛʜᴇᴍ!",
-        )
-        raise
-
-
-@check_admin(is_user=True)
-async def refresh_admin(update, _):
-    try:
-        ADMIN_CACHE.pop(update.effective_chat.id)
-    except KeyError:
-        pass
-
-    await update.effective_message.reply_text("ᴀᴅᴍɪɴs ᴄᴀᴄʜᴇ ʀᴇғʀᴇsʜᴇᴅ!")
-
-
-@connection_status
-@check_admin(permission="can_promote_members", is_both=True)
-async def set_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    bot = context.bot
-    args = context.args
-
-    chat = update.effective_chat
-    message = update.effective_message
-
-    user_id, title = await extract_user_and_text(message, context, args)
-
-    if message.from_user.id == 1087968824:
-        await message.reply_text(
-            text="ʏᴏᴜ ᴀʀᴇ ᴀɴ ᴀɴᴏɴʏᴍᴏᴜs ᴀᴅᴍɪɴ.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            text="ᴄʟɪᴄᴋ ᴛᴏ ᴘʀᴏᴠᴇ ᴀᴅᴍɪɴ.",
-                            callback_data=f"admin_=title={user_id}={title}",
-                        ),
-                    ],
-                ],
-            ),
-        )
-
-        return
-
-    try:
-        user_member = await chat.get_member(user_id)
-    except:
-        return
-
-    if not user_id:
-        await message.reply_text(
-            "You ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
-        )
-        return
-
-    if user_member.status == ChatMemberStatus.OWNER:
-        await message.reply_text(
-            "ᴛʜɪs ᴘᴇʀsᴏɴ CREATED ᴛʜᴇ ᴄʜᴀᴛ, ʜᴏᴡ ᴄᴀɴ ɪ sᴇᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ ғᴏʀ ʜɪᴍ?",
-        )
-        return
-
-    if user_member.status != ChatMemberStatus.ADMINISTRATOR:
-        await message.reply_text(
-            "ᴄᴀɴ'ᴛ sᴇᴛ ᴛɪᴛʟᴇ ғᴏʀ ɴᴏɴ-ᴀᴅᴍɪɴs!\nᴘʀᴏᴍᴏᴛᴇ ᴛʜᴇᴍ ғɪʀsᴛ ᴛᴏ sᴇᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ!",
-        )
-        return
-
-    if user_id == bot.id:
-        await message.reply_text(
-            "I ᴄᴀɴ'ᴛ sᴇᴛ ᴍʏ ᴏᴡɴ ᴛɪᴛʟᴇ ᴍʏsᴇʟғ! ɢᴇᴛ ᴛʜᴇ ᴏɴᴇ ᴡʜᴏ ᴍᴀᴅᴇ ᴍᴇ ᴀᴅᴍɪɴ ᴛᴏ ᴅᴏ ɪᴛ ғᴏʀ ᴍᴇ.",
-        )
-        return
-
-    if not title:
-        await message.reply_text("sᴇᴛᴛɪɴɢ ʙʟᴀɴᴋ ᴛɪᴛʟᴇ ᴅᴏᴇsɴ'ᴛ ᴅᴏ ᴀɴʏᴛʜɪɴɢ!")
-        return
-
-    if len(title) > 16:
-        await message.reply_text(
-            "ᴛʜᴇ ᴛɪᴛʟᴇ ʟᴇɴɢᴛʜ ɪs ʟᴏɴɢᴇʀ ᴛʜᴀɴ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs.\nᴛʀᴜɴᴄᴀᴛɪɴɢ ɪᴛ ᴛᴏ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs.",
-        )
-
-    try:
-        await bot.setChatAdministratorCustomTitle(chat.id, user_id, title)
-    except BadRequest:
-        await message.reply_text(
-            "ᴇɪᴛʜᴇʀ ᴛʜᴇʏ ᴀʀᴇɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇᴅ ʙʏ ᴍᴇ ᴏʀ ʏᴏᴜ sᴇᴛ ᴀ ᴛɪᴛʟᴇ ᴛᴇxᴛ ᴛʜᴀᴛ ɪs ɪᴍᴘᴏssɪʙʟᴇ ᴛᴏ sᴇᴛ."
-        )
-        raise
-
-    await bot.sendMessage(
-        chat.id,
-        f"sᴜᴄᴄᴇssғᴜʟʟʏ sᴇᴛ ᴛɪᴛʟᴇ ғᴏʀ <code>{user_member.user.first_name or user_id}</code> "
-        f"ᴛᴏ <code>{html.escape(title[:16])}</code>!",
-        parse_mode=ParseMode.HTML,
-        message_thread_id=message.message_thread_id if chat.is_forum else None,
-    )
-
-
-@loggable
-@check_admin(permission="can_pin_messages", is_both=True)
-async def pin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    bot = context.bot
-    args = context.args
-
-    user = update.effective_user
-    chat = update.effective_chat
-    message = update.effective_message
-
-    is_group = chat.type != "private" and chat.type != "channel"
-    prev_message = update.effective_message.reply_to_message
-
-    is_silent = True
-    if len(args) >= 1:
-        is_silent = not (
-            args[0].lower() == "notify"
-            or args[0].lower() == "loud"
-            or args[0].lower() == "violent"
-        )
-
-    if not prev_message:
-        await message.reply_text("ᴘʟᴇᴀsᴇ ʀᴇᴘʟʏ ᴛᴏ ᴍᴇssᴀɢᴇ ᴡʜɪᴄʜ ʏᴏᴜ ᴡᴀɴᴛ ᴛᴏ ᴘɪɴ.")
-        return
-
-    if message.from_user.id == 1087968824:
-        await message.reply_text(
-            text="ʏᴏᴜ ᴀʀᴇ ᴀɴ ᴀɴᴏɴʏᴍᴏᴜs ᴀᴅᴍɪɴ.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            text="ᴄʟɪᴄᴋ ᴛᴏ ᴘʀᴏᴠᴇ ᴀᴅᴍɪɴ.",
-                            callback_data=f"admin_=pin={prev_message.message_id}={is_silent}",
-                        ),
-                    ],
-                ],
-            ),
-        )
-
-        return
-
-    if prev_message and is_group:
-        try:
-            await bot.pinChatMessage(
-                chat.id,
-                prev_message.message_id,
-                disable_notification=is_silent,
-            )
-        except BadRequest as excp:
-            if excp.message == "Chat_not_modified":
-                pass
-            else:
-                raise
-        log_message = (
-            f"<b>{html.escape(chat.title)}:</b>\n"
-            f"#𝐏𝐈𝐍𝐍𝐄𝐃\n"
-            f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(user.id, html.escape(user.first_name))}"
-        )
-
-        return log_message
-
-
-@loggable
-@check_admin(permission="can_pin_messages", is_both=True)
-async def unpin(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    bot = context.bot
-    chat = update.effective_chat
-    user = update.effective_user
-    message = update.effective_message
-
-    if message.from_user.id == 1087968824:
-        await message.reply_text(
-            text="ʏᴏᴜ ᴀʀᴇ ᴀɴ ᴀɴᴏɴʏᴍᴏᴜs ᴀᴅᴍɪɴ.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            text="ᴄʟɪᴄᴋ ᴛᴏ prove Admin.",
-                            callback_data=f"admin_=unpin",
-                        ),
-                    ],
-                ],
-            ),
-        )
-
-        return
-
-    try:
-        await bot.unpinChatMessage(chat.id)
-    except BadRequest as excp:
-        if excp.message == "Chat_not_modified":
-            pass
-        elif excp.message == "ᴍᴇssᴀɢᴇ ᴛᴏ ᴜɴᴘɪɴ ɴᴏᴛ ғᴏᴜɴᴅ":
-            await message.reply_text("ɴᴏ ᴘɪɴɴᴇᴅ ᴍᴇssᴀɢᴇ ғᴏᴜɴᴅ")
-            return
-        else:
-            raise
-
-    log_message = (
-        f"<b>{html.escape(chat.title)}:</b>\n"
-        f"#𝐔𝐍𝐏𝐈𝐍𝐍𝐄𝐃\n"
-        f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(user.id, html.escape(user.first_name))}"
-    )
-
-    return log_message
-
-
-@loggable
-@check_admin(permission="can_pin_messages", is_both=True)
-async def unpinall(update: Update, context: ContextTypes.DEFAULT_TYPE) -> str:
-    bot = context.bot
-    chat = update.effective_chat
-    user = update.effective_user
-    message = update.effective_message
-    admin_member = await chat.get_member(user.id)
-
-    if message.from_user.id == 1087968824:
-        await message.reply_text(
-            text="ʏᴏᴜ ᴀʀᴇ ᴀɴ ᴀɴᴏɴʏᴍᴏᴜs ᴀᴅᴍɪɴ.",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    [
-                        InlineKeyboardButton(
-                            text="ᴄʟɪᴄᴋ ᴛᴏ ᴘʀᴏᴠᴇ ᴀᴅᴍɪɴ.",
-                            callback_data=f"admin_=unpinall",
-                        ),
-                    ],
-                ],
-            ),
-        )
-
-        return
-    elif not admin_member.status == ChatMemberStatus.OWNER and user.id not in DRAGONS:
-        await message.reply_text("ᴏɴʟʏ ᴄʜᴀᴛ OWNER ᴄᴀɴ ᴜɴᴘɪɴ ᴀʟʟ ᴍᴇssᴀɢᴇs.")
-        return
-
-    try:
-        if chat.is_forum:
-            await bot.unpin_all_forum_topic_messages(chat.id, message.message_thread_id)
-        else:
-            await bot.unpin_all_chat_messages(chat.id)
-    except BadRequest as excp:
-        if excp.message == "Chat_not_modified":
-            pass
-        else:
-            raise
-
-    log_message = (
-        f"<b>{html.escape(chat.title)}:</b>\n"
-        f"#𝐔𝐍𝐏𝐈𝐍𝐍𝐄𝐃_𝐀𝐋𝐋\n"
-        f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(user.id, html.escape(user.first_name))}"
-    )
-
-    return log_message
-
-
-@connection_status
-@check_admin(permission="can_invite_users", is_bot=True)
-async def invite(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    bot = context.bot
-    chat = update.effective_chat
-
-    if chat.username:
-        await update.effective_message.reply_text(f"https://t.me/{chat.username}")
-    elif chat.type in [ChatType.SUPERGROUP, ChatType.CHANNEL]:
-        bot_member = await chat.get_member(bot.id)
-        if (
-            bot_member.can_invite_users
-            if isinstance(bot_member, ChatMemberAdministrator)
-            else None
-        ):
-            invitelink = await bot.exportChatInviteLink(chat.id)
-            await update.effective_message.reply_text(invitelink)
-        else:
-            await update.effective_message.reply_text(
-                "I ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴀᴄᴄᴇss ᴛᴏ ᴛʜᴇ ɪɴᴠɪᴛᴇ ʟɪɴᴋ, ᴛʀʏ ᴄʜᴀɴɢɪɴɢ ᴍʏ ᴘᴇʀᴍɪssɪᴏɴs!",
-            )
-    else:
-        await update.effective_message.reply_text(
-            "I ᴄᴀɴ ᴏɴʟʏ ɢɪᴠᴇ ʏᴏᴜ ɪɴᴠɪᴛᴇ ʟɪɴᴋs ғᴏʀ sᴜᴘᴇʀɢʀᴏᴜᴘs ᴀɴᴅ ᴄʜᴀɴɴᴇʟs, sᴏʀʀʏ!",
-        )
-
-
-@connection_status
-async def adminlist(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user = update.effective_user  # type: Optional[User]
-    bot = context.bot
-
-    if update.effective_message.chat.type == "private":
-        await send_message(
-            update.effective_message, "ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ᴏɴʟʏ ᴡᴏʀᴋs ɪɴ ɢʀᴏᴜᴘs."
-        )
-        return
-
-    chat_id = update.effective_chat.id
-
-    try:
-        msg = await update.effective_message.reply_text(
-            "ғᴇᴛᴄʜɪɴɢ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴs...",
-            parse_mode=ParseMode.HTML,
-        )
-    except BadRequest:
-        msg = await update.effective_message.reply_text(
-            "ғᴇᴛᴄʜɪɴɢ ɢʀᴏᴜᴘ ᴀᴅᴍɪɴs...",
-            quote=False,
-            parse_mode=ParseMode.HTML,
-        )
-
-    administrators = await bot.getChatAdministrators(chat_id)
-    text = "ᴀᴅᴍɪɴs ɪɴ <b>{}</b>:".format(html.escape(update.effective_chat.title))
-
-    custom_admin_list = {}
-    normal_admin_list = []
-
-    for admin in administrators:
-        if isinstance(admin, (ChatMemberAdministrator, ChatMemberOwner)):
-            user = admin.user
-            status = admin.status
-            custom_title = admin.custom_title
-
-            if user.first_name == "":
-                name = "☠ ᴅᴇʟᴇᴛᴇᴅ ᴀᴄᴄᴏᴜɴᴛ"
-            else:
-                name = "{}".format(
-                    mention_html(
-                        user.id,
-                        html.escape(user.first_name + " " + (user.last_name or "")),
-                    ),
-                )
-
-            # if user.username:
-            #    name = escape_markdown("@" + user.username)
-            if status == ChatMemberStatus.OWNER:
-                text += "\n 👑 ᴄʀᴇᴀᴛᴏʀ:"
-                text += "\n<code> • </code>{}\n".format(name)
-
-                if custom_title:
-                    text += f"<code> ┗━ {html.escape(custom_title)}</code>\n"
-
-            if status == ChatMemberStatus.ADMINISTRATOR:
-                if custom_title:
-                    try:
-                        custom_admin_list[custom_title].append(name)
-                    except KeyError:
-                        custom_admin_list.update({custom_title: [name]})
-                else:
-                    normal_admin_list.append(name)
-
-    text += "\n🔱 ᴀᴅᴍɪɴs:"
-
-    for admin in normal_admin_list:
-        text += "\n<code> • </code>{}".format(admin)
-
-    for admin_group in custom_admin_list.copy():
-        if len(custom_admin_list[admin_group]) == 1:
-            text += "\n<code> • </code>{} | <code>{}</code>".format(
-                custom_admin_list[admin_group][0],
-                html.escape(admin_group),
-            )
-            custom_admin_list.pop(admin_group)
-
-    text += "\n"
-    for admin_group, value in custom_admin_list.items():
-        text += "\n🚨 <code>{}</code>".format(admin_group)
-        for admin in value:
-            text += "\n<code> • </code>{}".format(admin)
-        text += "\n"
-
-    try:
-        await msg.edit_text(text, parse_mode=ParseMode.HTML)
-    except BadRequest:  # if original message is deleted
-        return
-
-
-@loggable
-async def admin_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    bot = context.bot
-    message = update.effective_message
-    chat = update.effective_chat
-    admin_user = query.from_user
-
-    splitter = query.data.replace("admin_", "").split("=")
-
-    if splitter[1] == "promote":
-        promoter = await chat.get_member(admin_user.id)
-
-        if (
-            not (
-                promoter.can_promote_members
-                if isinstance(promoter, ChatMemberAdministrator)
-                else None or promoter.status == ChatMemberStatus.OWNER
-            )
-            and admin_user.id not in DRAGONS
-        ):
-            await query.answer(
-                "ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛʜᴇ ɴᴇᴄᴇssᴀʀʏ ʀɪɢʜᴛs ᴛᴏ ᴅᴏ ᴛʜᴀᴛ!", show_alert=True
-            )
-            return
-
-        try:
-            user_id = int(splitter[2])
-        except ValueError:
-            user_id = splitter[2]
-            await message.edit_text(
-                "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..."
-            )
-            return
-
-        try:
-            user_member = await chat.get_member(user_id)
-        except:
-            return
-
-        if (
-            user_member.status == ChatMemberStatus.ADMINISTRATOR
-            or user_member.status == ChatMemberStatus.OWNER
-        ):
-            await message.edit_text(
-                "ʜᴏᴡ ᴀᴍ I ᴍᴇᴀɴᴛ ᴛᴏ ᴘʀᴏᴍᴏᴛᴇ sᴏᴍᴇᴏɴᴇ ᴛʜᴀᴛ's ᴀʟʀᴇᴀᴅʏ ᴀɴ ᴀᴅᴍɪɴ?"
-            )
-            return
-
-        bot_member = await chat.get_member(bot.id)
-
-        if isinstance(bot_member, ChatMemberAdministrator):
-            try:
-                await bot.promoteChatMember(
-                    chat.id,
-                    user_id,
-                    can_change_info=bot_member.can_change_info,
-                    can_post_messages=bot_member.can_post_messages,
-                    can_edit_messages=bot_member.can_edit_messages,
-                    can_delete_messages=bot_member.can_delete_messages,
-                    can_invite_users=bot_member.can_invite_users,
-                    # can_promote_members=bot_member.can_promote_members,
-                    can_restrict_members=bot_member.can_restrict_members,
-                    can_pin_messages=bot_member.can_pin_messages,
-                    can_manage_chat=bot_member.can_manage_chat,
-                    can_manage_video_chats=bot_member.can_manage_video_chats,
-                )
-            except BadRequest as err:
-                if err.message == "User_not_mutual_contact":
-                    await message.edit_text(
-                        "I ᴄᴀɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇ sᴏᴍᴇᴏɴᴇ ᴡʜᴏ ɪsɴ'ᴛ ɪɴ ᴛʜᴇ ɢʀᴏᴜᴘ"
-                    )
-                else:
-                    await message.edit_text("An ᴇʀʀᴏʀ ᴏᴄᴄᴜʀᴇᴅ ᴡʜɪʟᴇ ᴘʀᴏᴍᴏᴛɪɴɢ.")
-                return
-
-        await message.edit_text(
-            f"sᴜᴄᴇssғᴜʟʟʏ ᴘʀᴏᴍᴏᴛᴇᴅ <b>{user_member.user.first_name or user_id}</b>!",
-            parse_mode=ParseMode.HTML,
-        )
-        await query.answer("Done")
-
-        log_message = (
-            f"<b>{html.escape(chat.title)}:</b>\n"
-            f"#𝐏𝐑𝐎𝐌𝐎𝐓𝐄𝐃\n"
-            f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(admin_user.id, admin_user.first_name)}\n"
-            f"<b>ᴜsᴇʀ:</b> {mention_html(user_member.user.id, user_member.user.first_name)}"
-        )
-
-        return log_message
-
-    elif splitter[1] == "demote":
-        demoter = await chat.get_member(admin_user.id)
-
-        if not (
-            demoter.can_promote_members
-            if isinstance(demoter, ChatMemberAdministrator)
-            else None or demoter.status == ChatMemberStatus.OWNER
-        ):
-            await query.answer(
-                "ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛʜᴇ ɴᴇᴄᴇssᴀʀʏ ʀɪɢʜᴛs ᴛᴏ ᴅᴏ ᴛʜᴀᴛ!", show_alert=True
-            )
-            return
-
-        try:
-            user_id = int(splitter[2])
-        except:
-            user_id = splitter[2]
-            await message.edit_text(
-                "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ.."
-            )
-            return
-
-        try:
-            user_member = await chat.get_member(user_id)
-        except:
-            return
-
-        if user_member.status == ChatMemberStatus.OWNER:
-            await message.edit_text(
-                "ᴛʜɪs ᴘᴇʀsᴏɴ CREATED ᴛʜᴇ ᴄʜᴀᴛ, ʜᴏᴡ ᴡᴏᴜʟᴅ I ᴅᴇᴍᴏᴛᴇ ᴛʜᴇᴍ?"
-            )
-            return
-
-        if not user_member.status == ChatMemberStatus.ADMINISTRATOR:
-            await message.edit_text("Can't demote what wasn't promoted!")
-            return
-
-        if user_id == bot.id:
-            await message.edit_text(
-                "I ᴄᴀɴ'ᴛ ᴅᴇᴍᴏᴛᴇ ᴍʏsᴇʟғ!, ɢᴇᴛ ᴀɴ ᴀᴅᴍɪɴ ᴛᴏ ᴅᴏ ɪᴛ ғᴏʀ ᴍᴇ."
-            )
-            return
-
-        try:
-            await bot.promoteChatMember(
-                chat.id,
-                user_id,
-                can_change_info=False,
-                can_post_messages=False,
-                can_edit_messages=False,
-                can_delete_messages=False,
-                can_invite_users=False,
-                can_restrict_members=False,
-                can_pin_messages=False,
-                can_promote_members=False,
-                can_manage_chat=False,
-                can_manage_video_chats=False,
-            )
-
-            await message.edit_text(
-                f"sᴜᴄᴇssғᴜʟʟʏ ᴅᴇᴍᴏᴛᴇᴅ <b>{user_member.user.first_name or user_id}</b>!",
+        if demoted:
+            update.effective_message.edit_text(
+                f"ʏᴇᴘ! {mention_html(user_member.user.id, user_member.user.first_name)} has been demoted in {chat.title}!"
+                f"ʙʏ {mention_html(user.id, user.first_name)}",
                 parse_mode=ParseMode.HTML,
             )
-            await query.answer("ᴅᴏɴᴇ")
-
-            log_message = (
+            query.answer("ᴅᴇᴍᴏᴛᴇᴅ!")
+            return (
                 f"<b>{html.escape(chat.title)}:</b>\n"
-                f"#𝐃𝐄𝐌𝐎𝐓𝐄𝐃\n"
-                f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(admin_user.id, admin_user.first_name)}\n"
-                f"<b>ᴜsᴇʀ:</b> {mention_html(user_member.user.id, user_member.user.first_name)}"
+                f"#ᴅᴇᴍᴏᴛᴇ\n"
+                f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(user.id, user.first_name)}\n"
+                f"<b>ᴜsᴇʀ:</b> {mention_html(member.user.id, member.user.first_name)}"
             )
-
-            return log_message
-        except BadRequest:
-            await message.edit_text(
-                "ᴄᴏᴜʟᴅ ɴᴏᴛ ᴅᴇᴍᴏᴛᴇ. I ᴍɪɢʜᴛ ɴᴏᴛ ʙᴇ ᴀᴅᴍɪɴ, ᴏʀ ᴛʜᴇ ᴀᴅᴍɪɴ sᴛᴀᴛᴜs ᴡᴀs ᴀᴘᴘᴏɪɴᴛᴇᴅ ʙʏ ᴀɴᴏᴛʜᴇʀ"
-                " user, so I can't act upon them!",
-            )
-            return
-
-    elif splitter[1] == "title":
-        title = splitter[3]
-
-        admin_member = await chat.get_member(admin_user.id)
-
-        if (
-            not (
-                (
-                    admin_member.can_promote_members
-                    if isinstance(admin_member, ChatMemberAdministrator)
-                    else None
-                )
-                or admin_member.status == ChatMemberStatus.OWNER
-            )
-            and admin_user.id not in DRAGONS
-        ):
-            await query.answer("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛʜᴇ ɴᴇᴄᴇssᴀʀʏ ʀɪɢʜᴛs ᴛᴏ ᴅᴏ ᴛʜᴀᴛ!")
-            return
-
-        try:
-            user_id = int(splitter[2])
-        except:
-            await message.edit_text(
-                "ʏᴏᴜ ᴅᴏɴ'ᴛ sᴇᴇᴍ ᴛᴏ ʙᴇ ʀᴇғᴇʀʀɪɴɢ ᴛᴏ ᴀ ᴜsᴇʀ ᴏʀ ᴛʜᴇ ID sᴘᴇᴄɪғɪᴇᴅ ɪs ɪɴᴄᴏʀʀᴇᴄᴛ..",
-            )
-            return
-
-        try:
-            user_member = await chat.get_member(user_id)
-        except:
-            return
-
-        if user_member.status == ChatMemberStatus.OWNER:
-            await message.edit_text(
-                "ᴛʜɪs ᴘᴇʀsᴏɴ CREATED ᴛʜᴇ ᴄʜᴀᴛ, ʜᴏᴡ ᴄᴀɴ I sᴇᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ ғᴏʀ ʜɪᴍ?",
-            )
-            return
-
-        if user_member.status != ChatMemberStatus.ADMINISTRATOR:
-            await message.edit_text(
-                "ᴄᴀɴ'ᴛ sᴇᴛ ᴛɪᴛʟᴇ ғᴏʀ ɴᴏɴ--ᴀᴅᴍɪɴs!\nᴘʀᴏᴍᴏᴛᴇ ᴛʜᴇᴍ ғɪʀsᴛ ᴛᴏ sᴇᴛ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ!",
-            )
-            return
-
-        if user_id == bot.id:
-            await message.edit_text(
-                "I ᴄᴀɴ'ᴛ sᴇᴛ ᴍʏ ᴏᴡɴ ᴛɪᴛʟᴇ ᴍʏsᴇʟғ! ɢᴇᴛ ᴛʜᴇ ᴏɴᴇ ᴡʜᴏ ᴍᴀᴅᴇ ᴍᴇ ᴀᴅᴍɪɴ ᴛᴏ ᴅᴏ ɪᴛ ғᴏʀ ᴍᴇ.",
-            )
-            return
-
-        if not title:
-            await message.edit_text("sᴇᴛᴛɪɴɢ ʙʟᴀɴᴋ ᴛɪᴛʟᴇ ᴅᴏᴇsɴ'ᴛ ᴅᴏ ᴀɴʏᴛʜɪɴɢ!")
-            return
-
-        if len(title) > 16:
-            await message.edit_text(
-                "ᴛʜᴇ ᴛɪᴛʟᴇ ʟᴇɴɢᴛʜ ɪs ʟᴏɴɢᴇʀ ᴛʜᴀɴ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs.\nᴛʀᴜɴᴄᴀᴛɪɴɢ ɪᴛ ᴛᴏ 16 ᴄʜᴀʀᴀᴄᴛᴇʀs.",
-            )
-
-        try:
-            await bot.setChatAdministratorCustomTitle(chat.id, user_id, title)
-        except BadRequest:
-            await message.edit_text(
-                "ᴇɪᴛʜᴇʀ ᴛʜᴇʏ ᴀʀᴇɴ'ᴛ ᴘʀᴏᴍᴏᴛᴇᴅ ʙʏ ᴍᴇ ᴏʀ ʏᴏᴜ sᴇᴛ ᴀ ᴛɪᴛʟᴇ ᴛᴇxᴛ ᴛʜᴀᴛ ɪs ɪᴍᴘᴏssɪʙʟᴇ ᴛᴏ sᴇᴛ."
-            )
-            return
-
-        await message.edit_text(
-            text=f"sᴜᴄᴇssғᴜʟʟʏ sᴇᴛ ᴛɪᴛʟᴇ ғᴏʀ <code>{user_member.user.first_name or user_id}</code> "
-            f"ᴛᴏ <code>{html.escape(title[:16])}</code>!",
-            parse_mode=ParseMode.HTML,
+    else:
+        update.effective_message.edit_text(
+            "ᴛʜɪs ᴜsᴇʀ ɪs ɴᴏᴛ ᴘʀᴏᴍᴏᴛᴇᴅ ᴏʀ ʜᴀs ʟᴇғᴛ ᴛʜᴇ ɢʀᴏᴜᴘ!"
         )
-
-    elif splitter[1] == "pin":
-        admin_member = await chat.get_member(admin_user.id)
-
-        if (
-            not (
-                (
-                    admin_member.can_pin_messages
-                    if isinstance(admin_member, ChatMemberAdministrator)
-                    else None
-                )
-                or admin_member.status == ChatMemberStatus.OWNER
-            )
-            and admin_user.id not in DRAGONS
-        ):
-            await query.answer(
-                "ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛʜᴇ ɴᴇᴄᴇssᴀʀʏ ʀɪɢʜᴛs ᴛᴏ ᴅᴏ ᴛʜᴀᴛ!", show_alert=True
-            )
-            return
-
-        try:
-            message_id = int(splitter[2])
-        except:
-            return
-
-        is_silent = bool(splitter[3])
-        is_group = chat.type != "private" and chat.type != "channel"
-
-        if is_group:
-            try:
-                await bot.pinChatMessage(
-                    chat.id,
-                    message_id,
-                    disable_notification=is_silent,
-                )
-            except BadRequest as excp:
-                if excp.message == "Chat_not_modified":
-                    pass
-                else:
-                    raise
-
-            await message.edit_text("Done Pinned.")
-
-            log_message = (
-                f"<b>{html.escape(chat.title)}</b>\n"
-                f"#𝐏𝐈𝐍𝐍𝐄𝐃\n"
-                f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(admin_user.id, html.escape(admin_user.first_name))}"
-            )
-
-            return log_message
-
-    elif splitter[1] == "unpin":
-        admin_member = await chat.get_member(admin_user.id)
-
-        if (
-            not (
-                (
-                    admin_member.can_pin_messages
-                    if isinstance(admin_member, ChatMemberAdministrator)
-                    else None
-                )
-                or admin_member.status == ChatMemberStatus.OWNER
-            )
-            and admin_user.id not in DRAGONS
-        ):
-            await query.answer(
-                "ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛʜᴇ ɴᴇᴄᴇssᴀʀʏ ʀɪɢʜᴛs ᴛᴏ ᴅᴏ ᴛʜᴀᴛ!",
-                show_alert=True,
-            )
-            return
-
-        try:
-            await bot.unpinChatMessage(chat.id)
-        except BadRequest as excp:
-            if excp.message == "Chat_not_modified":
-                pass
-            elif excp.message == "ᴍᴇssᴀɢᴇ ᴛᴏ ᴜɴᴘɪɴ ɴᴏᴛ ғᴏᴜɴᴅ":
-                await message.edit_text("ɴᴏ ᴘɪɴɴᴇᴅ ᴍᴇssᴀɢᴇ ғᴏᴜɴᴅ")
-                return
-            else:
-                raise
-
-        log_message = (
-            f"<b>{html.escape(chat.title)}:</b>\n"
-            f"#𝐔𝐍𝐏𝐈𝐍𝐍𝐄𝐃\n"
-            f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(admin_user.id, html.escape(admin_user.first_name))}"
-        )
-
-        return log_message
-
-    elif splitter[1] == "unpinall":
-        admin_member = await chat.get_member(admin_user.id)
-
-        if (
-            not admin_member.status == ChatMemberStatus.OWNER
-            and admin_user.id not in DRAGONS
-        ):
-            await query.answer("ᴏɴʟʏ ᴄʜᴀᴛ OWNER ᴄᴀɴ ᴜɴᴘɪɴ ᴀʟʟ ᴍᴇssᴀɢᴇs.")
-            return
-
-        try:
-            if chat.is_forum:
-                await bot.unpin_all_forum_topic_messages(
-                    chat.id, message.message_thread_id
-                )
-            else:
-                await bot.unpin_all_chat_messages(chat.id)
-        except BadRequest as excp:
-            if excp.message == "Chat_not_modified":
-                pass
-            else:
-                raise
-
-        await message.edit_text("ᴅᴏɴᴇ ᴜɴᴘɪɴɴᴇᴅ ᴀʟʟ ᴍᴇssᴀɢᴇs.")
-        log_message = (
-            f"<b>{html.escape(chat.title)}:</b>\n"
-            f"#𝐔𝐍𝐏𝐈𝐍𝐍𝐄𝐃_𝐀𝐋𝐋\n"
-            f"<b>ᴀᴅᴍɪɴ:</b> {mention_html(admin_user.id, html.escape(admin_user.first_name))}"
-        )
-
-        return log_message
+        return ""
 
 
-__help__ = """
- • /admins*:* ʟɪsᴛ ᴏғ ᴀᴅᴍɪɴs ɪɴ ᴛʜᴇ ᴄʜᴀᴛ
-
-*ᴀᴅᴍɪɴs ᴏɴʟʏ:*
- • /pin*:* sɪʟᴇɴᴛʟʏ ᴘɪɴs ᴛʜᴇ ᴍᴇssᴀɢᴇ ʀᴇᴘʟɪᴇᴅ ᴛᴏ - ᴀᴅᴅ `'loud'` ᴏʀ `'notify'` ᴛᴏ ɢɪᴠᴇ ɴᴏᴛɪғs ᴛᴏ ᴜsᴇʀs
- • /unpin*:* ᴜɴᴘɪɴs ᴛʜᴇ ᴄᴜʀʀᴇɴᴛʟʏ ᴘɪɴɴᴇᴅ ᴍᴇssᴀɢᴇ
- • /unpinall*:* ᴜɴᴘɪɴs ᴀʟʟ ᴛʜᴇ ᴘɪɴɴᴇᴅ ᴍᴇssᴀɢᴇ, ᴡᴏʀᴋs ɪɴ ᴛᴏᴘɪᴄs ᴛᴏᴏ (ᴏɴʟʏ OWNER ᴄᴀɴ ᴅᴏ.)
- • /invitelink*:* ɢᴇᴛs ɪɴᴠɪᴛᴇʟɪɴᴋ
- • /promote*:* ᴘʀᴏᴍᴏᴛᴇs ᴛʜᴇ ᴜsᴇʀ ʀᴇᴘʟɪᴇᴅ ᴛᴏ
- • /demote*:* ᴅᴇᴍᴏᴛᴇs ᴛʜᴇ ᴜsᴇʀ ʀᴇᴘʟɪᴇᴅ to
- • /title <ᴛɪᴛʟᴇ ʜᴇʀᴇ>*:* sᴇᴛs ᴀ ᴄᴜsᴛᴏᴍ ᴛɪᴛʟᴇ ғᴏʀ ᴀɴ ᴀᴅᴍɪɴ ᴛʜᴀᴛ ᴛʜᴇ ʙᴏᴛ ᴘʀᴏᴍᴏᴛᴇᴅ
- • /admincache*:* ғᴏʀᴄᴇ ʀᴇғʀᴇsʜ ᴛʜᴇ ᴀᴅᴍɪɴs ʟɪsᴛ
-"""
-
-ADMINLIST_HANDLER = DisableAbleCommandHandler("admins", adminlist)
-
-PIN_HANDLER = CommandHandler("pin", pin, filters=filters.ChatType.GROUPS)
-UNPIN_HANDLER = CommandHandler("unpin", unpin, filters=filters.ChatType.GROUPS)
-UNPINALL_HANDLER = CommandHandler("unpinall", unpinall, filters=filters.ChatType.GROUPS)
-
-INVITE_HANDLER = DisableAbleCommandHandler("invitelink", invite)
-
-PROMOTE_HANDLER = DisableAbleCommandHandler("promote", promote)
-DEMOTE_HANDLER = DisableAbleCommandHandler("demote", demote)
-
-SET_TITLE_HANDLER = CommandHandler("title", set_title)
-ADMIN_REFRESH_HANDLER = CommandHandler(
-    "admincache", refresh_admin, filters=filters.ChatType.GROUPS
+SET_DESC_HANDLER = CommandHandler(
+    "setdesc", set_desc, filters=Filters.chat_type.groups, run_async=True
 )
-ADMIN_CALLBACK_HANDLER = CallbackQueryHandler(admin_callback, pattern=r"admin_")
+SET_STICKER_HANDLER = CommandHandler(
+    "setsticker", set_sticker, filters=Filters.chat_type.groups, run_async=True
+)
+SETCHATPIC_HANDLER = CommandHandler(
+    "setgpic", setchatpic, filters=Filters.chat_type.groups, run_async=True
+)
+RMCHATPIC_HANDLER = CommandHandler(
+    "delgpic", rmchatpic, filters=Filters.chat_type.groups, run_async=True
+)
+SETCHAT_TITLE_HANDLER = CommandHandler(
+    "setgtitle", setchat_title, filters=Filters.chat_type.groups, run_async=True
+)
 
-exon.add_handler(ADMINLIST_HANDLER)
-exon.add_handler(PIN_HANDLER)
-exon.add_handler(UNPIN_HANDLER)
-exon.add_handler(UNPINALL_HANDLER)
-exon.add_handler(INVITE_HANDLER)
-exon.add_handler(PROMOTE_HANDLER)
-exon.add_handler(DEMOTE_HANDLER)
-exon.add_handler(SET_TITLE_HANDLER)
-exon.add_handler(ADMIN_REFRESH_HANDLER)
-exon.add_handler(ADMIN_CALLBACK_HANDLER)
+PIN_HANDLER = CommandHandler(
+    "pin", pin, filters=Filters.chat_type.groups, run_async=True
+)
+UNPIN_HANDLER = CommandHandler(
+    "unpin", unpin, filters=Filters.chat_type.groups, run_async=True
+)
+PINNED_HANDLER = CommandHandler(
+    "pinned", pinned, filters=Filters.chat_type.groups, run_async=True
+)
+
+INVITE_HANDLER = DisableAbleCommandHandler("invitelink", invite, run_async=True)
+
+PROMOTE_HANDLER = DisableAbleCommandHandler("promote", promote, run_async=True)
+FULLPROMOTE_HANDLER = DisableAbleCommandHandler(
+    "fullpromote", fullpromote, run_async=True
+)
+DEMOTE_HANDLER = DisableAbleCommandHandler("demote", demote, run_async=True)
+
+SET_TITLE_HANDLER = CommandHandler("title", set_title, run_async=True)
+ADMIN_REFRESH_HANDLER = CommandHandler(
+    "admincache", refresh_admin, filters=Filters.chat_type.groups, run_async=True
+)
+
+dispatcher.add_handler(SET_DESC_HANDLER)
+dispatcher.add_handler(SET_STICKER_HANDLER)
+dispatcher.add_handler(SETCHATPIC_HANDLER)
+dispatcher.add_handler(RMCHATPIC_HANDLER)
+dispatcher.add_handler(SETCHAT_TITLE_HANDLER)
+dispatcher.add_handler(PIN_HANDLER)
+dispatcher.add_handler(UNPIN_HANDLER)
+dispatcher.add_handler(PINNED_HANDLER)
+dispatcher.add_handler(INVITE_HANDLER)
+dispatcher.add_handler(PROMOTE_HANDLER)
+dispatcher.add_handler(FULLPROMOTE_HANDLER)
+dispatcher.add_handler(DEMOTE_HANDLER)
+dispatcher.add_handler(SET_TITLE_HANDLER)
+dispatcher.add_handler(ADMIN_REFRESH_HANDLER)
 
 __mod_name__ = "𝐀ᴅᴍɪɴ"
 __command_list__ = [
-    "adminlist",
+    "setdesc" "setsticker" "setgpic" "delgpic" "setgtitle",
     "admins",
     "invitelink",
     "promote",
+    "fullpromote",
     "demote",
     "admincache",
 ]
 __handlers__ = [
-    ADMINLIST_HANDLER,
+    SET_DESC_HANDLER,
+    SET_STICKER_HANDLER,
+    SETCHATPIC_HANDLER,
+    RMCHATPIC_HANDLER,
+    SETCHAT_TITLE_HANDLER,
     PIN_HANDLER,
     UNPIN_HANDLER,
+    PINNED_HANDLER,
     INVITE_HANDLER,
     PROMOTE_HANDLER,
+    FULLPROMOTE_HANDLER,
     DEMOTE_HANDLER,
     SET_TITLE_HANDLER,
     ADMIN_REFRESH_HANDLER,
 ]
+
+
+# ғᴏʀ ʜᴇʟᴘ ᴍᴇɴᴜ
+
+# """
+from Exon.modules.language import gs
+
+
+def get_help(chat):
+    return gs(chat, "admin_help")
+
+
+# """

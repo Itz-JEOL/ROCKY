@@ -1,11 +1,39 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
 import collections
 import importlib
 
-from telegram import Update
-from telegram.constants import ParseMode
-from telegram.ext import CommandHandler, ContextTypes
+from telegram import ParseMode, Update
+from telegram.ext import CallbackContext
 
-from Exon import exon, telethn
+from Exon import dispatcher, telethn
 from Exon.__main__ import (
     CHAT_SETTINGS,
     DATA_EXPORT,
@@ -17,23 +45,25 @@ from Exon.__main__ import (
     USER_INFO,
     USER_SETTINGS,
 )
-from Exon.modules.helper_funcs.chat_status import check_admin
+from Exon.modules.helper_funcs.chat_status import dev_plus, sudo_plus
+from Exon.modules.helper_funcs.decorators import Exoncmd
 
 
-@check_admin(only_dev=True)
-async def load(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@Exoncmd(command="load")
+@dev_plus
+def load(update: Update, context: CallbackContext):
     message = update.effective_message
     text = message.text.split(" ", 1)[1]
-    load_messasge = await message.reply_text(
-        f"ᴀᴛᴛᴇᴍᴘᴛɪɴɢ ᴛᴏ ʟᴏᴀᴅ ᴍᴏᴅᴜʟᴇ : <b>{text}</b>",
+    load_messasge = message.reply_text(
+        f"Attempting to load module : <b>{text}</b>",
         parse_mode=ParseMode.HTML,
     )
 
     try:
         imported_module = importlib.import_module("Exon.modules." + text)
     except:
-        await load_messasge.edit_text("ᴅᴏᴇs ᴛʜᴀᴛ ᴍᴏᴅᴜʟᴇ ᴇᴠᴇɴ ᴇxɪsᴛ?")
-        ʀᴇᴛᴜʀɴ
+        load_messasge.edit_text("Does that module even exist?")
+        return
 
     if not hasattr(imported_module, "__mod_name__"):
         imported_module.__mod_name__ = imported_module.__name__
@@ -41,23 +71,22 @@ async def load(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if imported_module.__mod_name__.lower() not in IMPORTED:
         IMPORTED[imported_module.__mod_name__.lower()] = imported_module
     else:
-        await load_messasge.edit_text("ᴍᴏᴅᴜʟᴇ ᴀʟʀᴇᴀᴅʏ ʟᴏᴀᴅᴇᴅ.")
+        load_messasge.edit_text("Module already loaded.")
         return
     if "__handlers__" in dir(imported_module):
         handlers = imported_module.__handlers__
         for handler in handlers:
             if not isinstance(handler, tuple):
-                exon.add_handler(handler)
+                dispatcher.add_handler(handler)
+            elif isinstance(handler[0], collections.Callable):
+                callback, telethon_event = handler
+                telethn.add_event_handler(callback, telethon_event)
             else:
-                if isinstance(handler[0], collections.Callable):
-                    callback, telethon_event = handler
-                    telethn.add_event_handler(callback, telethon_event)
-                else:
-                    handler_name, priority = handler
-                    exon.add_handler(handler_name, priority)
+                handler_name, priority = handler
+                dispatcher.add_handler(handler_name, priority)
     else:
         IMPORTED.pop(imported_module.__mod_name__.lower())
-        await load_messasge.edit_text("ᴛʜᴇ ᴍᴏᴅᴜʟᴇ ᴄᴀɴɴᴏᴛ ʙᴇ ʟᴏᴀᴅᴇᴅ.")
+        load_messasge.edit_text("The module cannot be loaded.")
         return
 
     if hasattr(imported_module, "__help__") and imported_module.__help__:
@@ -85,25 +114,26 @@ async def load(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if hasattr(imported_module, "__user_settings__"):
         USER_SETTINGS[imported_module.__mod_name__.lower()] = imported_module
 
-    await load_messasge.edit_text(
-        "sᴜᴄᴄᴇssғᴜʟʟʏ ʟᴏᴀᴅᴇᴅ ᴍᴏᴅᴜʟᴇ : <b>{}</b>".format(text),
+    load_messasge.edit_text(
+        "Successfully loaded module : <b>{}</b>".format(text),
         parse_mode=ParseMode.HTML,
     )
 
 
-@check_admin(only_dev=True)
-async def unload(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@Exoncmd(command="unload")
+@dev_plus
+def unload(update: Update, context: CallbackContext):
     message = update.effective_message
     text = message.text.split(" ", 1)[1]
-    unload_messasge = await message.reply_text(
-        f"ᴀᴛᴛᴇᴍᴘᴛɪɴɢ ᴛᴏ ᴜɴʟᴏᴀᴅ ᴍᴏᴅᴜʟᴇ : <b>{text}</b>",
+    unload_messasge = message.reply_text(
+        f"Attempting to unload module : <b>{text}</b>",
         parse_mode=ParseMode.HTML,
     )
 
     try:
         imported_module = importlib.import_module("Exon.modules." + text)
     except:
-        await unload_messasge.edit_text("ᴅᴏᴇs ᴛʜᴀᴛ ᴍᴏᴅᴜʟᴇ ᴇᴠᴇɴ ᴇxɪsᴛ?")
+        unload_messasge.edit_text("Does that module even exist?")
         return
 
     if not hasattr(imported_module, "__mod_name__"):
@@ -111,25 +141,24 @@ async def unload(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if imported_module.__mod_name__.lower() in IMPORTED:
         IMPORTED.pop(imported_module.__mod_name__.lower())
     else:
-        await unload_messasge.edit_text("ᴄᴀɴ'ᴛ ᴜɴʟᴏᴀᴅ sᴏᴍᴇᴛʜɪɴɢ ᴛʜᴀᴛ ɪsɴ'ᴛ ʟᴏᴀᴅᴇᴅ.")
+        unload_messasge.edit_text("Can't unload something that isn't loaded.")
         return
     if "__handlers__" in dir(imported_module):
         handlers = imported_module.__handlers__
         for handler in handlers:
             if isinstance(handler, bool):
-                await unload_messasge.edit_text("ᴛʜɪs ᴍᴏᴅᴜʟᴇ ᴄᴀɴ'ᴛ ʙᴇ ᴜɴʟᴏᴀᴅᴇᴅ!")
+                unload_messasge.edit_text("This module can't be unloaded!")
                 return
-            elif not isinstance(handler, tuple):
-                exon.remove_handler(handler)
+            if not isinstance(handler, tuple):
+                dispatcher.remove_handler(handler)
+            elif isinstance(handler[0], collections.Callable):
+                callback, telethon_event = handler
+                telethn.remove_event_handler(callback, telethon_event)
             else:
-                if isinstance(handler[0], collections.Callable):
-                    callback, telethon_event = handler
-                    telethn.remove_event_handler(callback, telethon_event)
-                else:
-                    handler_name, priority = handler
-                    exon.remove_handler(handler_name, priority)
+                handler_name, priority = handler
+                dispatcher.remove_handler(handler_name, priority)
     else:
-        await unload_messasge.edit_text("ᴛʜᴇ ᴍᴏᴅᴜʟᴇ ᴄᴀɴɴᴏᴛ ʙᴇ ᴜɴʟᴏᴀᴅᴇᴅ.")
+        unload_messasge.edit_text("The module cannot be unloaded.")
         return
 
     if hasattr(imported_module, "__help__") and imported_module.__help__:
@@ -157,14 +186,15 @@ async def unload(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if hasattr(imported_module, "__user_settings__"):
         USER_SETTINGS.pop(imported_module.__mod_name__.lower())
 
-    await unload_messasge.edit_text(
-        f"sᴜᴄᴄᴇssғᴜʟʟʏ ᴜɴʟᴏᴀᴅᴇᴅ ᴍᴏᴅᴜʟᴇ : <b>{text}</b>",
+    unload_messasge.edit_text(
+        f"Successfully unloaded module : <b>{text}</b>",
         parse_mode=ParseMode.HTML,
     )
 
 
-@check_admin(only_sudo=True)
-async def listmodules(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@Exoncmd(command="listmodules")
+@sudo_plus
+def listmodules(update: Update, context: CallbackContext):
     message = update.effective_message
     module_list = []
 
@@ -174,16 +204,22 @@ async def listmodules(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file_name = file_info.__name__.rsplit("Exon.modules.", 1)[1]
         mod_name = file_info.__mod_name__
         module_list.append(f"- <code>{mod_name} ({file_name})</code>\n")
-    module_list = "ғᴏʟʟᴏᴡɪɴɢ ᴍᴏᴅᴜʟᴇs ᴀʀᴇ ʟᴏᴀᴅᴇᴅ : \n\n" + "".join(module_list)
-    await message.reply_text(module_list, parse_mode=ParseMode.HTML)
+    module_list = "Following modules are loaded : \n\n" + "".join(module_list)
+    message.reply_text(module_list, parse_mode=ParseMode.HTML)
 
-
-LOAD_HANDLER = CommandHandler("load", load)
-UNLOAD_HANDLER = CommandHandler("unload", unload)
-LISTMODULES_HANDLER = CommandHandler("listmodules", listmodules)
-
-exon.add_handler(LOAD_HANDLER)
-exon.add_handler(UNLOAD_HANDLER)
-exon.add_handler(LISTMODULES_HANDLER)
 
 __mod_name__ = "𝐌ᴏᴅᴜʟᴇs"
+
+
+# ғᴏʀ ʜᴇʟᴘ ᴍᴇɴᴜ
+
+
+# """
+from Exon.modules.language import gs
+
+
+def get_help(chat):
+    return gs(chat, "modules_help")
+
+
+# """

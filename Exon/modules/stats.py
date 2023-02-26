@@ -23,41 +23,36 @@ SOFTWARE.
 """
 
 # ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
-# TG :- @Abishnoi1M
-#      :- Abishnoi_bots
-#     GITHUB :- Abishnoi69 ""
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+import os
+import time
+
+import psutil
+
+import Exon.modules.no_sql.users_db as users_db
+from Exon import BOT_NAME, StartTime
+from Exon.modules.helper_funcs import formatter
+
+# sᴛᴀᴛs ᴍᴏᴅᴜʟᴇ
 
 
-import requests
+async def bot_sys_stats():
+    bot_uptime = int(time.time() - StartTime)
+    cpu = psutil.cpu_percent()
+    mem = psutil.virtual_memory().percent
+    disk = psutil.disk_usage("/").percent
+    process = psutil.Process(os.getpid())
+    stats = f"""
+------------------
+⛖ {BOT_NAME} ᴜᴘᴛɪᴍᴇ : {formatter.get_readable_time((bot_uptime))}
+⛖ ʙᴏᴛ ᴄᴀᴘᴀsɪᴛʏ : {round(process.memory_info()[0] / 1024 ** 2)} ᴍʙ
+⛖ ᴄᴘᴜ ᴜsᴀɢᴇ : {cpu}%
+⛖ ʀᴀᴍ ᴜsᴀɢᴇ : {mem}%
+⛖ ᴅɪsᴋ ᴜsᴀɢᴇ : {disk}%
+⛖ ᴜsᴇʀs : 0{users_db.num_users()} ᴜsᴇʀs.
+⛖ ɢʀᴏᴜᴘs : 0{users_db.num_chats()} ɢʀᴏᴜᴘs.
+"""
 
-from Exon import SUPPORT_CHAT
-from Exon.events import register as abishnoi
-
-
-@abishnoi(pattern="[/!]dare")
-async def _(asux):
-    try:
-        ak = requests.get("https://api.truthordarebot.xyz/v1/dare").json()
-        results = f"{ak['question']}"
-        return await asux.reply(results)
-    except Exception:
-        await asux.reply(f"ᴇʀʀᴏʀ ʀᴇᴘᴏʀᴛ @{SUPPORT_CHAT}")
-
-
-@abishnoi(pattern="[/!]truth")
-async def _(asux):
-    try:
-        ak = requests.get("https://api.truthordarebot.xyz/v1/truth").json()
-        results = f"{ak['question']}"
-        return await asux.reply(results)
-    except Exception:
-        await asux.reply(f"ᴇʀʀᴏʀ ʀᴇᴘᴏʀᴛ @{SUPPORT_CHAT}")
-
-
-__mod_name__ = "𝐓ʀᴜᴛʜ-Dᴀʀᴇ"
-
-from Exon.modules.language import gs
-
-
-def get_help(chat):
-    return gs(chat, "td_help")
+    return stats

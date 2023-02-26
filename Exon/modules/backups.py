@@ -1,12 +1,39 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
 import json
 import os
 import time
 from io import BytesIO
 
-from telegram import Update
-from telegram.constants import ParseMode
+from telegram import ParseMode
 from telegram.error import BadRequest
-from telegram.ext import CommandHandler, ContextTypes
+from telegram.ext import CommandHandler
 
 # from Exon.modules.sql import warns_sql as warnssql
 import Exon.modules.sql.blacklist_sql as blacklistsql
@@ -18,31 +45,30 @@ import Exon.modules.sql.notes_sql as sql
 
 # from Exon.modules.rules import get_rules
 import Exon.modules.sql.rules_sql as rulessql
-from Exon import EVENT_LOGS, LOGGER, OWNER_ID, SUPPORT_CHAT, exon
+from Exon import JOIN_LOGGER, LOGGER, OWNER_ID, SUPPORT_CHAT, dispatcher
 from Exon.__main__ import DATA_IMPORT
 from Exon.modules.connection import connected
 from Exon.modules.helper_funcs.alternate import typing_action
-from Exon.modules.helper_funcs.chat_status import check_admin
+from Exon.modules.helper_funcs.chat_status import user_admin
 from Exon.modules.sql import disable_sql as disabledsql
 
 
+@user_admin
 @typing_action
-@check_admin(is_user=True)
-async def import_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+def import_data(update, context):
     msg = update.effective_message
     chat = update.effective_chat
     user = update.effective_user
     # TODO: allow uploading doc with command, not just as reply
     # only work with a doc
 
-    conn = await connected(context.bot, update, chat, user.id, need_admin=True)
+    conn = connected(context.bot, update, chat, user.id, need_admin=True)
     if conn:
-        chat = await exon.bot.getChat(conn)
-        chat_obj = await exon.bot.getChat(conn)
-        chat_name = chat_obj.title
+        chat = dispatcher.bot.getChat(conn)
+        chat_name = dispatcher.bot.getChat(conn).title
     else:
         if update.effective_message.chat.type == "private":
-            await update.effective_message.reply_text("ᴛʜɪs ɪs ᴀ ɢʀᴏᴜᴘ ᴏɴʟʏ ᴄᴏᴍᴍᴀɴᴅ!")
+            update.effective_message.reply_text("ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ ғᴏʀ ɢʀᴏᴜᴘ !")
             return ""
 
         chat = update.effective_chat
@@ -50,24 +76,22 @@ async def import_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if msg.reply_to_message and msg.reply_to_message.document:
         try:
-            file_info = await context.bot.get_file(
-                msg.reply_to_message.document.file_id
-            )
+            file_info = context.bot.get_file(msg.reply_to_message.document.file_id)
         except BadRequest:
-            await msg.reply_text(
-                "ᴛʀʏ ᴛᴏ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ᴀɴᴅ ᴜᴘʟᴏᴀᴅɪɴɢ ᴛʜᴇ ғɪʟᴇ ʏᴏᴜʀsᴇʟғ ᴀɢᴀɪɴ, ᴛʜɪs ᴏɴᴇ sᴇᴇᴍ ʙʀᴏᴋᴇɴ ᴛᴏ ᴍᴇ!",
+            msg.reply_text(
+                "ᴛʀʏ ᴅᴏᴡɴʟᴏᴀᴅɪɴɢ ᴀɴᴅ ᴜᴘʟᴏᴀᴅɪɴɢ ᴛʜᴇ ғɪʟᴇ ʏᴏᴜʀsᴇʟғ ᴀɢᴀɪɴ, ᴛʜɪs ᴏɴᴇ sᴇᴇᴍ ʙʀᴏᴋᴇɴ ᴛᴏ ᴍᴇ!",
             )
             return
 
         with BytesIO() as file:
-            await file_info.download_to_memory(out=file)
+            file_info.download(out=file)
             file.seek(0)
             data = json.load(file)
 
         # only import one group
         if len(data) > 1 and str(chat.id) not in data:
-            await msg.reply_text(
-                "ᴛʜᴇʀᴇ ᴀʀᴇ ᴍᴏʀᴇ ᴛʜᴀɴ ᴏɴᴇ ɢʀᴏᴜᴘ ɪɴ ᴛʜɪs ғɪʟᴇ ᴀɴᴅ ᴛʜᴇ ᴄʜᴀᴛ.ɪᴅ ɪs ɴᴏᴛ sᴀᴍᴇ! ʜᴏᴡ ᴀᴍ i sᴜᴘᴘᴏsᴇᴅ ᴛᴏ ɪᴍᴘᴏʀᴛ ɪᴛ?",
+            msg.reply_text(
+                "ᴛʜᴇʀᴇ ᴀʀᴇ ᴍᴏʀᴇ ᴛʜᴀɴ ᴏɴᴇ ɢʀᴏᴜᴘ ɪɴ ᴛʜɪs ғɪʟᴇ ᴀɴᴅ ᴛʜᴇ chat.id ɪs ɴᴏᴛ sᴀᴍᴇ! ʜᴏᴡ ᴀᴍ ɪ sᴜᴘᴘᴏsᴇᴅ ᴛᴏ ɪᴍᴘᴏʀᴛ ɪᴛ?",
             )
             return
 
@@ -75,11 +99,11 @@ async def import_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             if data.get(str(chat.id)) is None:
                 if conn:
-                    text = "ʙᴀᴄᴋᴜᴘ ᴄᴏᴍᴇs ғʀᴏᴍ ᴀɴᴏᴛʜᴇʀ chat, ɪ ᴄᴀɴ'ᴛ ʀᴇᴛᴜʀɴ ᴀɴᴏᴛʜᴇʀ ᴄʜᴀᴛ ᴛᴏ ᴄʜᴀᴛ *{}*".format(
+                    text = "ʙᴀᴄᴋᴜᴘ ᴄᴏᴍᴇs ғʀᴏᴍ ᴀɴᴏᴛʜᴇʀ ᴄʜᴀᴛ, ɪ ᴄᴀɴ'ᴛ ʀᴇᴛᴜʀɴ ᴀɴᴏᴛʜᴇʀ ᴄʜᴀᴛ ᴛᴏ ᴄʜᴀᴛ *{}*".format(
                         chat_name,
                     )
                 else:
-                    text = "ʙᴀᴄᴋᴜᴘ ᴄᴏᴍᴇs ғʀᴏᴍ ᴀɴᴏᴛʜᴇʀ ᴄʜᴀᴛ, I ᴄᴀɴ'ᴛ ʀᴇᴛᴜʀɴ ᴀɴᴏᴛʜᴇʀ ᴄʜᴀᴛ ᴛᴏ ᴛʜɪs ᴄʜᴀᴛ"
+                    text = "ʙᴀᴄᴋᴜᴘ ᴄᴏᴍᴇs ғʀᴏᴍ ᴀɴᴏᴛʜᴇʀ ᴄʜᴀᴛ, I ᴄᴀɴ'ᴛ ʀᴇᴛᴜʀɴ another ᴄʜᴀᴛ ᴛᴏ ᴛʜɪs ᴄʜᴀᴛ"
                 return msg.reply_text(text, parse_mode="markdown")
         except Exception:
             return msg.reply_text("ᴛʜᴇʀᴇ ᴡᴀs ᴀ ᴘʀᴏʙʟᴇᴍ ᴡʜɪʟᴇ ɪᴍᴘᴏʀᴛɪɴɢ ᴛʜᴇ ᴅᴀᴛᴀ!")
@@ -99,12 +123,9 @@ async def import_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             for mod in DATA_IMPORT:
-                try:
-                    await mod.__import_data__(str(chat.id), data, msg)
-                except TypeError:
-                    pass
+                mod.__import_data__(str(chat.id), data)
         except Exception:
-            await msg.reply_text(
+            msg.reply_text(
                 f"ᴀɴ ᴇʀʀᴏʀ ᴏᴄᴄᴜʀʀᴇᴅ ᴡʜɪʟᴇ ʀᴇᴄᴏᴠᴇʀɪɴɢ ʏᴏᴜʀ ᴅᴀᴛᴀ. ᴛʜᴇ ᴘʀᴏᴄᴇss ғᴀɪʟᴇᴅ. ɪғ ʏᴏᴜ ᴇxᴘᴇʀɪᴇɴᴄᴇ ᴀ ᴘʀᴏʙʟᴇᴍ ᴡɪᴛʜ ᴛʜɪs, ᴘʟᴇᴀsᴇ ᴛᴀᴋᴇ ɪᴛ ᴛᴏ @{SUPPORT_CHAT}",
             )
 
@@ -121,28 +142,25 @@ async def import_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text = "ʙᴀᴄᴋᴜᴘ ғᴜʟʟʏ ʀᴇsᴛᴏʀᴇᴅ ᴏɴ *{}*.".format(chat_name)
         else:
             text = "ʙᴀᴄᴋᴜᴘ ғᴜʟʟʏ ʀᴇsᴛᴏʀᴇᴅ"
-        await msg.reply_text(text, parse_mode="markdown")
-    else:
-        await msg.reply_text("ʏᴏᴜ ʜᴀᴠᴇ ᴛᴏ ʀᴇᴘʟʏ ᴛᴏ ᴇxᴘᴏʀᴛᴇᴅ ʙᴀᴄᴋᴜᴘ ᴅᴏᴄᴜᴍᴇɴᴛ.")
-        return
+        msg.reply_text(text, parse_mode="markdown")
 
 
-@check_admin(is_user=True)
-async def export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+@user_admin
+def export_data(update, context):
     chat_data = context.chat_data
     msg = update.effective_message  # type: Optional[Message]
     user = update.effective_user  # type: Optional[User]
     chat_id = update.effective_chat.id
     chat = update.effective_chat
     current_chat_id = update.effective_chat.id
-    conn = await connected(context.bot, update, chat, user.id, need_admin=True)
+    conn = connected(context.bot, update, chat, user.id, need_admin=True)
     if conn:
-        chat = await exon.bot.getChat(conn)
+        chat = dispatcher.bot.getChat(conn)
         chat_id = conn
-        # chat_name = await exon.bot.getChat(conn).title
+        # chat_name = dispatcher.bot.getChat(conn).title
     else:
         if update.effective_message.chat.type == "private":
-            await update.effective_message.reply_text("ᴛʜɪs ɪs ᴀ ɢʀᴏᴜᴘ ᴏɴʟʏ ᴄᴏᴍᴍᴀɴᴅ!")
+            update.effective_message.reply_text("ᴛʜɪs ɪs ᴀ ɢʀᴏᴜᴘ ᴄᴏᴍᴍᴀɴᴅ!")
             return ""
         chat = update.effective_chat
         chat_id = update.effective_chat.id
@@ -157,16 +175,15 @@ async def export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "%H:%M:%S %d/%m/%Y",
                 time.localtime(checkchat.get("value")),
             )
-            await update.effective_message.reply_text(
+            update.effective_message.reply_text(
                 "ʏᴏᴜ ᴄᴀɴ ᴏɴʟʏ ʙᴀᴄᴋᴜᴘ ᴏɴᴄᴇ ᴀ ᴅᴀʏ!\nʏᴏᴜ ᴄᴀɴ ʙᴀᴄᴋᴜᴘ ᴀɢᴀɪɴ ɪɴ ᴀʙᴏᴜᴛ `{}`".format(
                     timeformatt,
                 ),
                 parse_mode=ParseMode.MARKDOWN,
             )
             return
-        else:
-            if user.id != OWNER_ID:
-                put_chat(chat_id, new_jam, chat_data)
+        if user.id != OWNER_ID:
+            put_chat(chat_id, new_jam, chat_data)
     else:
         if user.id != OWNER_ID:
             put_chat(chat_id, new_jam, chat_data)
@@ -341,13 +358,13 @@ async def export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         },
     }
     baccinfo = json.dumps(backup, indent=4)
-    with open("Exon{}.backup".format(chat_id), "w") as f:
+    with open("Exon-Exon{}.backup".format(chat_id), "w") as f:
         f.write(str(baccinfo))
-    await context.bot.sendChatAction(current_chat_id, "upload_document")
+    context.bot.sendChatAction(current_chat_id, "upload_document")
     tgl = time.strftime("%H:%M:%S - %d/%m/%Y", time.localtime(time.time()))
     try:
-        await context.bot.sendMessage(
-            EVENT_LOGS,
+        context.bot.sendMessage(
+            JOIN_LOGGER,
             "*sᴜᴄᴄᴇssғᴜʟʟʏ ɪᴍᴘᴏʀᴛᴇᴅ ʙᴀᴄᴋᴜᴘ:*\nᴄʜᴀᴛ: `{}`\nᴄʜᴀᴛ ɪᴅ: `{}`\nᴏɴ: `{}`".format(
                 chat.title,
                 chat_id,
@@ -357,19 +374,19 @@ async def export_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except BadRequest:
         pass
-    await context.bot.sendDocument(
+    context.bot.sendDocument(
         current_chat_id,
-        document=open("Exon{}.backup".format(chat_id), "rb"),
-        caption="*sᴜᴄᴄᴇssғᴜʟʟʏ ᴇxᴘᴏʀᴛᴇᴅ ʙᴀᴄᴋᴜᴘ:*\nᴄʜᴀᴛ: `{}`\nᴄʜᴀᴛ ɪᴅ: `{}`\nᴏɴ: `{}`\n\nɴᴏᴛᴇ: ᴛʜɪs `Exon-Backup` ᴡᴀs sᴘᴇᴄɪᴀʟʟʏ ᴍᴀᴅᴇ ғᴏʀ  ɴᴏᴛᴇs.".format(
+        document=open("Exon-Exon{}.backup".format(chat_id), "rb"),
+        caption="*sᴜᴄᴄᴇssғᴜʟʟʏ ᴇxᴘᴏʀᴛᴇᴅ ʙᴀᴄᴋᴜᴘ:*\nᴄʜᴀᴛ: `{}`\nᴄʜᴀᴛ ɪᴅ: `{}`\nᴏɴ: `{}`\n\nɴᴏᴛᴇ: ᴛʜɪs `Exon-Exon-Backup` ᴡᴀs sᴘᴇᴄɪᴀʟʟʏ ᴍᴀᴅᴇ ғᴏʀ ɴᴏᴛᴇs.".format(
             chat.title,
             chat_id,
             tgl,
         ),
+        timeout=360,
         reply_to_message_id=msg.message_id,
         parse_mode=ParseMode.MARKDOWN,
-        message_thread_id=msg.message_thread_id if chat.is_forum else None,
     )
-    os.remove("Exon{}.backup".format(chat_id))  # Cleaning file
+    os.remove("Exon-Exon{}.backup".format(chat_id))  # Cleaning file
 
 
 # Temporary data
@@ -387,20 +404,24 @@ def get_chat(chat_id, chat_data):
         return {"status": False, "value": False}
 
 
-__mod_name__ = "𝐁ᴀᴄᴋᴜᴘs"
+__mod_name__ = "𝐁ᴀᴄᴋᴜᴘ"
 
-__help__ = """
-*ᴏɴʟʏ ғᴏʀ ɢʀᴏᴜᴘ ᴏᴡɴᴇʀ:*
+IMPORT_HANDLER = CommandHandler(["import", "backup"], import_data, run_async=True)
+EXPORT_HANDLER = CommandHandler(
+    "export", export_data, pass_chat_data=True, run_async=True
+)
 
- • /import: ʀᴇᴘʟʏ ᴛᴏ ᴛʜᴇ ʙᴀᴄᴋᴜᴘ ғɪʟᴇ ғᴏʀ ᴛʜᴇ ʙᴜᴛʟᴇʀ / ᴇᴍɪʟɪᴀ ɢʀᴏᴜᴘ ᴛᴏ ɪᴍᴘᴏʀᴛ ᴀs ᴍᴜᴄʜ ᴀs ᴘᴏssɪʙʟᴇ, ᴍᴀᴋɪɴɢ ᴛʀᴀɴsғᴇʀs ᴠᴇʀʏ ᴇᴀsʏ! \
- ɴᴏᴛᴇ ᴛʜᴀᴛ ғɪʟᴇs / ᴘʜᴏᴛᴏs ᴄᴀɴɴᴏᴛ ʙᴇ ɪᴍᴘᴏʀᴛᴇᴅ ᴅᴜᴇ ᴛᴏ ᴛᴇʟᴇɢʀᴀᴍ ʀᴇsᴛʀɪᴄᴛɪᴏɴs.
+dispatcher.add_handler(IMPORT_HANDLER)
+dispatcher.add_handler(EXPORT_HANDLER)
 
- • /export: ᴇxᴘᴏʀᴛ ɢʀᴏᴜᴘ ᴅᴀᴛᴀ, ᴡʜɪᴄʜ ᴡɪʟʟ ʙᴇ ᴇxᴘᴏʀᴛᴇᴅ ᴀʀᴇ: ʀᴜʟᴇs, ɴᴏᴛᴇs (ᴅᴏᴄᴜᴍᴇɴᴛs, ɪᴍᴀɢᴇs, music, ᴠɪᴅᴇᴏ, ᴀᴜᴅɪᴏ, ᴠᴏɪᴄᴇ, ᴛᴇxᴛ, ᴛᴇxᴛ ʙᴜᴛᴛᴏɴs) \
 
-"""
+# ғᴏʀ ʜᴇʟᴘ ᴍᴇɴᴜ
+# """
+from Exon.modules.language import gs
 
-IMPORT_HANDLER = CommandHandler("import", import_data)
-EXPORT_HANDLER = CommandHandler("export", export_data)
 
-exon.add_handler(IMPORT_HANDLER)
-exon.add_handler(EXPORT_HANDLER)
+def get_help(chat):
+    return gs(chat, "backup_help")
+
+
+# """

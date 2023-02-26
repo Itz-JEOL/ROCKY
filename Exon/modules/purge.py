@@ -1,12 +1,39 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
 import time
 
 from telethon import events
-from telethon.errors.rpcerrorlist import MessageDeleteForbiddenError
 
-from Exon import LOGGER, telethn
+from Exon import telethn
 from Exon.modules.helper_funcs.telethn.chatstatus import (
     can_delete_messages,
-    user_can_purge,
     user_is_admin,
 )
 
@@ -17,22 +44,19 @@ async def purge_messages(event):
         return
 
     if not await user_is_admin(
-        user_id=event.sender_id, message=event
+        user_id=event.sender_id,
+        message=event,
     ) and event.from_id not in [1087968824]:
-        await event.reply("ᴏɴʟʏ ᴀᴅᴍɪɴs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ ᴛᴏ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ")
+        await event.reply("Only Admins are allowed to use this command")
         return
 
-    if not await user_can_purge(user_id=event.sender_id, message=event):
-        await event.reply("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛʜᴇ ᴘᴇʀᴍɪssɪᴏɴ ᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴇssᴀɢᴇs")
-        return
-
-    if not can_delete_messages(message=event):
-        await event.reply("ᴄᴀɴ'ᴛ sᴇᴇᴍ ᴛᴏ ᴘᴜʀɢᴇ ᴛʜᴇ ᴍᴇssᴀɢᴇ")
+    if not await can_delete_messages(message=event):
+        await event.reply("Can't seem to purge the message")
         return
 
     reply_msg = await event.get_reply_message()
     if not reply_msg:
-        await event.reply("ʀᴇᴘʟʏ ᴛᴏ ᴀ ᴍᴇssᴀɢᴇ ᴛᴏ sᴇʟᴇᴄᴛ ᴡʜᴇʀᴇ ᴛᴏ sᴛᴀʀᴛ ᴘᴜʀɢɪɴɢ ғʀᴏᴍ.")
+        await event.reply("Reply to a message to select where to start purging from.")
         return
     messages = []
     message_id = reply_msg.id
@@ -48,9 +72,9 @@ async def purge_messages(event):
     try:
         await event.client.delete_messages(event.chat_id, messages)
     except:
-        raise
+        pass
     time_ = time.perf_counter() - start
-    text = f"ᴘᴜʀɢᴇᴅ sᴜᴄᴄᴇssғᴜʟʟʏ ɪɴ {time_:0.2f} sᴇᴄᴏɴᴅ(s)"
+    text = f"Purged Successfully in {time_:0.2f} Second(s)"
     await event.respond(text, parse_mode="markdown")
 
 
@@ -59,51 +83,24 @@ async def delete_messages(event):
         return
 
     if not await user_is_admin(
-        user_id=event.sender_id, message=event
+        user_id=event.sender_id,
+        message=event,
     ) and event.from_id not in [1087968824]:
-        await event.reply("ᴏɴʟʏ ᴀᴅᴍɪɴs ᴀʀᴇ ᴀʟʟᴏᴡᴇᴅ ᴛᴏ ᴜsᴇ ᴛʜɪs ᴄᴏᴍᴍᴀɴᴅ")
+        await event.reply("Only Admins are allowed to use this command")
         return
 
-    if not await user_can_purge(user_id=event.sender_id, message=event):
-        await event.reply("ʏᴏᴜ ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛʜᴇ ᴘᴇʀᴍɪssɪᴏɴ ᴛᴏ ᴅᴇʟᴇᴛᴇ messages")
+    if not await can_delete_messages(message=event):
+        await event.reply("Can't seem to delete this?")
         return
 
     message = await event.get_reply_message()
-    me = await telethn.get_me()
-    BOT_ID = me.id
-
-    if (
-        not can_delete_messages(message=event)
-        and message
-        and not int(message.sender.id) == int(BOT_ID)
-    ):
-        if event.chat.admin_rights is None:
-            return await event.reply(
-                "I'ᴍ ɴᴏᴛ ᴀɴ ᴀᴅᴍɪɴ, ᴅᴏ ʏᴏᴜ ᴍɪɴᴅ ᴘʀᴏᴍᴏᴛɪɴɢ ᴍᴇ ғɪʀsᴛ?"
-            )
-        elif not event.chat.admin_rights.delete_messages:
-            return await event.reply("I ᴅᴏɴ'ᴛ ʜᴀᴠᴇ ᴛʜᴇ ᴘᴇʀᴍɪssɪᴏɴ ᴛᴏ ᴅᴇʟᴇᴛᴇ ᴍᴇssᴀɢᴇs!")
-
     if not message:
-        await event.reply("ᴡʜᴀᴛ ᴡᴀɴᴛ ᴛᴏ ᴅᴇʟᴇᴛᴇ?")
+        await event.reply("Whadya want to delete?")
         return
     chat = await event.get_input_chat()
-    # del_message = [message, event.message]
-    await event.client.delete_messages(chat, message)
-    try:
-        await event.client.delete_messages(chat, event.message)
-    except MessageDeleteForbiddenError:
-        LOGGER.error(
-            "ᴇʀʀᴏʀ ɪɴ ᴅᴇʟᴇᴛɪɴɢ ᴍᴇssᴀɢᴇ {} ɪɴ {}".format(event.message.id, event.chat.id)
-        )
+    del_message = [message, event.message]
+    await event.client.delete_messages(chat, del_message)
 
-
-__help__ = """
-*ᴀᴅᴍɪɴ ᴏɴʟʏ:*
-• /del: ᴅᴇʟᴇᴛᴇs ᴛʜᴇ ᴍᴇssᴀɢᴇ ʏᴏᴜ ʀᴇᴘʟɪᴇᴅ to
-• /purge: ᴅᴇʟᴇᴛᴇs ᴀʟʟ ᴍᴇssᴀɢᴇs ʙᴇᴛᴡᴇᴇɴ ᴛʜɪs ᴀɴᴅ ᴛʜᴇ ʀᴇᴘʟɪᴇᴅ ᴛᴏ ᴍᴇssᴀɢᴇ.
-• /purge <ɪɴᴛᴇɢᴇʀ x>: ᴅᴇʟᴇᴛᴇs ᴛʜᴇ ʀᴇᴘʟɪᴇᴅ ᴍᴇssᴀɢᴇ, ᴀɴᴅ X ᴍᴇssᴀɢᴇs ғᴏʟʟᴏᴡɪɴɢ ɪᴛ ɪғ ʀᴇᴘʟɪᴇᴅ ᴛᴏ ᴀ ᴍᴇssᴀɢᴇ.
-"""
 
 PURGE_HANDLER = purge_messages, events.NewMessage(pattern="^[!/]purge$")
 DEL_HANDLER = delete_messages, events.NewMessage(pattern="^[!/]del$")
@@ -111,7 +108,22 @@ DEL_HANDLER = delete_messages, events.NewMessage(pattern="^[!/]del$")
 telethn.add_event_handler(*PURGE_HANDLER)
 telethn.add_event_handler(*DEL_HANDLER)
 
-__mod_name__ = "𝐏ᴜʀɢᴇ"
 
 __command_list__ = ["del", "purge"]
 __handlers__ = [PURGE_HANDLER, DEL_HANDLER]
+
+
+__mod_name__ = "𝐏ᴜʀɢᴇ"
+
+# ғᴏʀ ʜᴇʟᴘ ᴍᴇɴᴜ
+
+
+# """
+from Exon.modules.language import gs
+
+
+def get_help(chat):
+    return gs(chat, "purge_help")
+
+
+# """

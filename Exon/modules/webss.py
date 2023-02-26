@@ -1,3 +1,33 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1M
+#      :- Abishnoi_bots
+#     GITHUB :- Abishnoi69 ""
+
+
 from base64 import b64decode
 from inspect import getfullargspec
 from io import BytesIO
@@ -5,8 +35,8 @@ from io import BytesIO
 from pyrogram import filters
 from pyrogram.types import Message
 
+from Exon import Abishnoi as app
 from Exon import aiohttpsession as session
-from Exon import app
 
 
 async def post(url: str, *args, **kwargs):
@@ -88,7 +118,10 @@ async def take_ss(_, message: Message):
         await m.edit(str(e))
 
 
-__help__ = """
-» /webss *:* sᴇɴᴅs ᴛʜᴇ sᴄʀᴇᴇɴsʜᴏᴛ ᴏғ ᴛʜᴇ ɢɪᴠᴇɴ ᴜʀʟ.
-"""
-__mod_name__ = "𝐖ᴇʙsʜᴏᴛ​​"
+__mod_name__ = "𝐖ᴇʙsʜᴏᴛ"
+
+from Exon.modules.language import gs
+
+
+def get_help(chat):
+    return gs(chat, "webss_help")

@@ -1,15 +1,44 @@
+"""
+MIT License
+
+Copyright (c) 2022 ABISHNOI69
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+"""
+
+# ""DEAR PRO PEOPLE,  DON'T REMOVE & CHANGE THIS LINE
+# TG :- @Abishnoi1m
+#     UPDATE   :- Abishnoi_bots
+#     GITHUB :- ABISHNOI69 ""
+
+
 import time
 
 from pyrogram import filters
 from pyrogram.types import Message
 
-from Exon import app
-from Exon.modules.helper_funcs import get_readable_time
-from Exon.modules.sql.mongo.afk_db import add_afk, is_afk, remove_afk
+from Exon import Abishnoi
+from Exon.modules.helper_funcs.readable_time import get_readable_time
+from Exon.modules.no_sql.afk_db import add_afk, is_afk, remove_afk
 
 
-# bug :- /afk with bot username afk back in 2 sec.
-@app.on_message(filters.command(["afk"]))
+@Abishnoi.on_message(filters.command(["afk", "brb"]))
 async def active_afk(_, message: Message):
     if message.sender_chat:
         return
@@ -94,7 +123,9 @@ async def active_afk(_, message: Message):
             "reason": _reason,
         }
     elif len(message.command) == 1 and message.reply_to_message.photo:
-        await app.download_media(message.reply_to_message, file_name=f"{user_id}.jpg")
+        await Abishnoi.download_media(
+            message.reply_to_message, file_name=f"{user_id}.jpg"
+        )
         details = {
             "type": "photo",
             "time": time.time(),
@@ -102,7 +133,9 @@ async def active_afk(_, message: Message):
             "reason": None,
         }
     elif len(message.command) > 1 and message.reply_to_message.photo:
-        await app.download_media(message.reply_to_message, file_name=f"{user_id}.jpg")
+        await Abishnoi.download_media(
+            message.reply_to_message, file_name=f"{user_id}.jpg"
+        )
         _reason = message.text.split(None, 1)[1].strip()
         details = {
             "type": "photo",
@@ -119,7 +152,7 @@ async def active_afk(_, message: Message):
                 "reason": None,
             }
         else:
-            await app.download_media(
+            await Abishnoi.download_media(
                 message.reply_to_message, file_name=f"{user_id}.jpg"
             )
             details = {
@@ -138,7 +171,7 @@ async def active_afk(_, message: Message):
                 "reason": _reason,
             }
         else:
-            await app.download_media(
+            await Abishnoi.download_media(
                 message.reply_to_message, file_name=f"{user_id}.jpg"
             )
             details = {
@@ -164,11 +197,15 @@ async def active_afk(_, message: Message):
 
 __mod_name__ = "𝐀ғᴋ"
 
-__help__ = """
-ᴡʜᴇɴ sᴏᴍᴇᴏɴᴇ ᴍᴇɴᴛɪᴏɴs ʏᴏᴜ ɪɴ ᴀ ᴄʜᴀᴛ, ᴛʜᴇ ᴜsᴇʀ ᴡɪʟʟ ʙᴇ ɴᴏᴛɪғɪᴇᴅ ʏᴏᴜ ᴀʀᴇ AFK. ʏᴏᴜ ᴄᴀɴ ᴇᴠᴇɴ ᴘʀᴏᴠɪᴅᴇ ᴀ ʀᴇᴀsᴏɴ ғᴏʀ ɢᴏɪɴɢ AFK, ᴡʜɪᴄʜ ᴡɪʟʟ ʙᴇ ᴘʀᴏᴠɪᴅᴇᴅ ᴛᴏ ᴛʜᴇ ᴜsᴇʀ ᴀs ᴡᴇʟʟ.
 
-/afk - ᴛʜɪs ᴡɪʟʟ sᴇᴛ ʏᴏᴜ ᴏғғʟɪɴᴇ.
-/afk [ʀᴇᴀsᴏɴ] - ᴛʜɪs ᴡɪʟʟ sᴇᴛ ʏᴏᴜ ᴏғғʟɪɴᴇ ᴡɪᴛʜ ᴀ ʀᴇᴀsᴏɴ.
-/afk [ʀᴇᴘʟɪᴇᴅ ᴛᴏ ᴀ sᴛɪᴄᴋᴇʀ/ᴘʜᴏᴛᴏ] - ᴛʜɪs ᴡɪʟʟ sᴇᴛ ʏᴏᴜ ᴏғғʟɪɴᴇ ᴡɪᴛʜ ᴀɴ ɪᴍᴀɢᴇ ᴏʀ sᴛɪᴄᴋᴇʀ.
-/afk [ʀᴇᴘʟɪᴇᴅ ᴛᴏ ᴀ sᴛɪᴄᴋᴇʀ/ᴘʜᴏᴛᴏ] [ʀᴇᴀsᴏɴ] - ᴛʜɪs ᴡɪʟʟ sᴇᴛ ʏᴏᴜ ᴀғᴋ ᴡɪᴛʜ ᴀɴ ɪᴍᴀɢᴇ ᴀɴᴅ ʀᴇᴀsᴏɴ ʙᴏᴛʜ.
-"""
+# ғᴏʀ ʜᴇʟᴘ ᴍᴇɴᴜ
+
+# """
+from Exon.modules.language import gs
+
+
+def get_help(chat):
+    return gs(chat, "afk_help")
+
+
+# """
