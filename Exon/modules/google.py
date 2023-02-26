@@ -14,7 +14,7 @@ from telegram.error import BadRequest
 from telegram.ext import ContextTypes
 from wikipedia.exceptions import DisambiguationError, PageError
 
-from Exon import exon
+from Exon import Abishnoi as Exon
 from Exon import register as Asubot
 from Exon.modules.disable import DisableAbleCommandHandler
 
