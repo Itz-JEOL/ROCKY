@@ -5,8 +5,7 @@ import os
 
 from telethon import types
 
-from Exon import app as asau
-from Exon import register
+from Exon import Abishnoi as asau
 from Exon import telethn as Client
 
 TMP_DOWNLOAD_DIRECTORY = "./"
