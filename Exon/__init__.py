@@ -166,14 +166,7 @@ telethn = TelegramClient(MemorySession(), API_ID, API_HASH)
 dispatcher = updater.dispatcher
 session_name = TOKEN.split(":")[0]
 
-# ᴍᴏɴɢᴏ ᴅᴀᴛᴀʙᴀsᴇ
-mongo = MongoCli(MONGO_DB_URI)
-db = mongo.EXON_ROBOT
-try:
-    client = MongoClient(MONGO_DB_URI)
-except:
-    exit(1)
-mdb = client[DB_NAME]
+
 
 Abishnoi = Client(
     session_name,
