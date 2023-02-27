@@ -133,18 +133,6 @@ OWNER_ID =  sᴛᴀʀᴛ @Exon_Robot & ᴛʏᴘᴇ /id
 
 
 
-━━━━━━━━━━━━━━━━━━━━
-
-<h3 align="center">
-    ─「 sᴜᴩᴩᴏʀᴛ 」─
-</h3>
-
-<p align="center">
-<a href="https://telegram.me/beta_support"><img src="https://img.shields.io/badge/-Support%20Group-blue.svg?style=for-the-badge&logo=Telegram"></a>
-</p>
-<p align="center">
-<a href="https://telegram.me/jeol_tg"><img src="https://img.shields.io/badge/Abishnoi%20-blue.svg?style=for-the-badge&logo=Telegram"></a>
-</p>
 
 
 ━━━━━━━━━━━━━━━━━━━━
