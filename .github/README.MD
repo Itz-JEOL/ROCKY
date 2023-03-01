@@ -23,6 +23,10 @@ _**ᴀᴠᴀɪʟᴀʙʟᴇ ᴏɴ ᴛᴇʟᴇɢʀᴀᴍ ᴀs [ʀᴏᴄᴋʏ ᴄ�
 <img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif">
 
 
+## How To Deploy
+
+<a href="https://youtu.be/rCVMMiMYywk"><img src="https://img.shields.io/badge/Watch%20Tutorial%20On%20YouTube-red.svg?logo=Youtube"></a>                     
+
 
 <p align="center">
 <b>𝗗𝗘𝗣𝗟𝗢𝗬𝗠𝗘𝗡𝗧 𝗠𝗘𝗧𝗛𝗢𝗗𝗦</b>
