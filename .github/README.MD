@@ -26,7 +26,7 @@ _**ᴀᴠᴀɪʟᴀʙʟᴇ ᴏɴ ᴛᴇʟᴇɢʀᴀᴍ ᴀs [ʀᴏᴄᴋʏ ᴄ�
 ## How To Deploy
 
 <p align="center">
-<a href="[https://youtu.be/lBJZdaA04Ig](https://youtu.be/rCVMMiMYywk)"><img src="https://img.shields.io/badge/Watch%20Tutorial%20On%20YouTube-red.svg?logo=Youtube"></a>                     
+<a href="https://youtu.be/rCVMMiMYywk"><img src="https://img.shields.io/badge/Watch%20Tutorial%20On%20YouTube-red.svg?logo=Youtube"></a> </a>                     
 </p>
 
 <p align="center">
