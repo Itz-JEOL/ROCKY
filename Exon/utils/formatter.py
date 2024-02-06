@@ -44,7 +44,7 @@ def get_readable_time(seconds: int) -> str:
     return ping_time
 
 
-# Convert seconds to mm:ss @AbishnoiMF
+# Convert seconds to mm:ss @Noxiousbgmistore
 async def convert_seconds_to_minutes(seconds: int):
     seconds = int(seconds)
     seconds %= 24 * 3600
