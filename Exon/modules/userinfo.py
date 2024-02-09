@@ -385,7 +385,7 @@ def info(update: Update, context: CallbackContext):
                             ),
                             InlineKeyboardButton(
                                 "ᴅɪsᴀsᴛᴇʀ", url="https://t.me/NoxiousBgmiStore"
-                        ],
+                            ),
                     ]
                 ),
                 parse_mode=ParseMode.HTML,
