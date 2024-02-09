@@ -377,7 +377,7 @@ def info(update: Update, context: CallbackContext):
                 chat.id,
                 photo=profile,
                 caption=(text),
-                reply_markup=InlineKeyboardMarkup(
+                reply_markup=InlineKeyboardMarkup
                     [
                         [
                             InlineKeyboardButton(
