@@ -315,7 +315,7 @@ def info(update: Update, context: CallbackContext):
         if spamwtc:
             text += "\n\n<b>ᴛʜɪs ᴘᴇʀsᴏɴ ɪs sᴘᴀᴍᴡᴀᴛᴄʜᴇᴅ!</b>"
             text += f"\nʀᴇᴀꜱᴏɴ: <pre>{spamwtc.reason}</pre>"
-            text += "\nᴀᴘᴘᴇᴀʟ ᴀᴛ @Noxiousbgmistore"
+            text += "\nᴀᴘᴘᴇᴀʟ ᴀᴛ @Noxiousxpro"
     except:
         pass  # don't crash if api is down somehow...
 
@@ -377,7 +377,7 @@ def info(update: Update, context: CallbackContext):
                 chat.id,
                 photo=profile,
                 caption=(text),
-                reply_markup=InlineKeyboardMarkup
+                reply_markup=InlineKeyboardMarkup(
                     [
                         [
                             InlineKeyboardButton(
@@ -386,6 +386,7 @@ def info(update: Update, context: CallbackContext):
                             InlineKeyboardButton(
                                 "ᴅɪsᴀsᴛᴇʀ", url="https://t.me/NoxiousBgmiStore"
                             ),
+                        ],
                     ]
                 ),
                 parse_mode=ParseMode.HTML,
@@ -516,8 +517,8 @@ def stats(update, context):
             status
             + "\n*Bot statistics*:\n"
             + "\n".join([mod.__stats__() for mod in STATS])
-            + "\n\n[⍙ ɢɪᴛʜᴜʙ](https://t.me/NoxiousBgmiStore) | ⍚\n\n "
-            + "╘══「 by [ᴀʙɪsʜɴᴏɪ](https://t.me/NoxiousBgmiStore) 」\n",
+            + "\n\n[⍙ ɢɪᴛʜᴜʙ](https://github.com/Abishnoi69/ExonRobot) | ⍚\n\n "
+            + "╘══「 by [ᴀʙɪsʜɴᴏɪ](github.com/Abishnoi69) 」\n",
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=InlineKeyboardMarkup(kb),
             disable_web_page_preview=True,
@@ -530,9 +531,9 @@ def stats(update, context):
                         "\n*Bot statistics*:\n"
                         + "\n".join(mod.__stats__() for mod in STATS)
                     )
-                    + "\n\n⍙ [ɢɪᴛʜᴜʙ](https://t.me/NoxiousBgmiStore) | ⍚ \n\n"
+                    + "\n\n⍙ [ɢɪᴛʜᴜʙ](https://github.com/Abishnoi69/ExonRobot) | ⍚ \n\n"
                 )
-                + "╘══「 by [ᴅʏɴᴀᴍɪᴄ](https://t.me/NoxiousBgmiStore) 」\n"
+                + "╘══「 by [ᴅʏɴᴀᴍɪᴄ](github.com/Abishnoi69) 」\n"
             ),
             parse_mode=ParseMode.MARKDOWN,
             reply_markup=InlineKeyboardMarkup(kb),
