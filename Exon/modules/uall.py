@@ -48,7 +48,7 @@ from Exon import *
 from Exon import LOGGER
 from Exon.events import register
 
-CMD_HELP = "/ !"
+CMD_HELP = "/ ! ."
 
 
 # ================================================
